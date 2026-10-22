@@ -37,28 +37,25 @@ def run():
         for url in urls:
             try:
                 f = feedparser.parse(url)
+                # Nur 2 Einträge pro Feed, max 200 Zeichen - hält den Request extrem schlank
                 for entry in f.entries[:2]:
                     raw_data[cat].append({
                         "title": entry.get("title", ""),
                         "source": f.feed.get("title", url),
                         "link": entry.get("link", ""),
-                        "summary": (entry.get("summary", "") or entry.get("description", ""))[:250]
+                        "summary": (entry.get("summary", "") or entry.get("description", ""))[:200]
                     })
             except Exception as e:
-                print(f"Fehler bei {url}: {e}")
+                print(f"Fehler bei Feed {url}: {e}")
 
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     
     prompt = f"""
-    Du bist der Chefredakteur meiner persönlichen Tageszeitung. Wähle aus den Rohdaten die wertvollsten Stücke aus: max. 2 pro Kategorie. Wähle 1 herausragendes Stück als 'deep_dive' (Leitartikel).
+    Du bist der Chefredakteur meiner Tageszeitung. Wähle aus den Rohdaten die wertvollsten Stücke aus (max. 2 pro Kategorie) und 1 herausragendes Stück als 'deep_dive'.
     
-    Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne Markdown-Blöcke oder zusätzlichen Text:
+    Das JSON-Schema MUSS exakt so aussehen:
     {{
-      "deep_dive": {{
-        "title": "...",
-        "summary": "...",
-        "takeaway": "..."
-      }},
+      "deep_dive": {{"title": "...", "summary": "...", "takeaway": "..."}},
       "geopolitik": [{{"title": "...", "source": "...", "link": "...", "summary": "...", "takeaway": "..."}}],
       "ai": [{{"title": "...", "source": "...", "link": "...", "summary": "...", "takeaway": "..."}}],
       "med_ai": [{{"title": "...", "source": "...", "link": "...", "summary": "...", "takeaway": "..."}}],
@@ -70,27 +67,31 @@ def run():
     {json.dumps(raw_data, ensure_ascii=False)}
     """
     
-    # Warteschleife: Versuche es bis zu 3 Mal, falls der Server überlastet ist
     max_retries = 3
+    response = None
+    
     for attempt in range(max_retries):
         try:
             print(f"Sende Anfrage an Gemini (Versuch {attempt + 1}/{max_retries})...")
             response = client.models.generate_content(
                 model="gemini-3.8-flash",
-                contents=prompt
+                contents=prompt,
+                config={"response_mime_type": "application/json"} # WICHTIG: Verhindert den Timeout!
             )
-            break  # Erfolgreich! Schleife beenden.
+            print("Antwort erfolgreich empfangen!")
+            break
         except Exception as e:
-            if "503" in str(e) or "UNAVAILABLE" in str(e):
-                if attempt < max_retries - 1:
-                    print("Server ist beschäftigt. Warte 30 Sekunden...")
-                    time.sleep(30)
-                else:
-                    print("Server dauerhaft überlastet. Abbruch.")
-                    raise e
+            print(f"Netzwerk- oder API-Fehler: {e}")
+            if attempt < max_retries - 1:
+                print("Verbindung unterbrochen. Warte 15 Sekunden und versuche es erneut...")
+                time.sleep(15)
             else:
-                raise e # Ein anderer Fehler, direkter Abbruch
-    
+                print("Endgültiger Abbruch nach 3 Versuchen.")
+                raise e
+
+    if not response:
+        raise Exception("Keine Antwort von Gemini erhalten.")
+
     raw_text = response.text.strip()
     if raw_text.startswith("```json"):
         raw_text = raw_text[7:]
