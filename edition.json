@@ -1,52 +1,71 @@
 {
   "deep_dive": {
-    "title": "Ambient Clinical Intelligence & Workflow-Automatisierung",
-    "summary": "Klinische Sprachmodelle verändern derzeit die Dokumentation in europäischen Krankenhäusern grundlegend. Durch automatisierte Strukturierung von Visiten und Entlassungsbriefen sinkt die manuelle KIS-Erfassungszeit deutlich.",
-    "takeaway": "Entscheidend ist nicht das größte Sprachmodell, sondern die nahtlose Einbettung in bestehende Klinik-Informationssysteme (KIS) und Schnittstellen."
+    "title": "The Endless Chip War",
+    "summary": "Im Interview spricht Rakesh Kumar, Autor von 'Chip Age', darüber, wie Halbleiter zur entscheidenden Ressource der Weltpolitik wurden und warum der globale Kampf um die Chip-Dominanz unvermindert anhält.",
+    "takeaway": "Mikrochips sind das Fundament moderner Geopolitik; Wer die Fertigung kontrolliert, bestimmt die globale Machtarchitektur."
   },
   "geopolitik": [
     {
-      "title": "Europäische Sicherheitsarchitektur und neue Verteidigungsdoktrinen",
-      "source": "Sicherheitspod / SWP",
-      "link": "https://www.swp-berlin.org",
-      "summary": "Analysen zur Neuausrichtung konventioneller Streitkräfte, Munitionsbeschaffung und der strategischen Rolle unbemannter Systeme im modernen Gefecht.",
-      "takeaway": "Abschreckung erfordert industrielle Kapazitäten und logistische Tiefe, nicht nur punktuelle High-End-Waffensysteme."
+      "title": "Deception in Mass Autonomous Warfare",
+      "source": "War on the Rocks",
+      "link": "https://warontherocks.com/deception-in-mass-autonomous-warfare/",
+      "summary": "Ein Blick auf taktische Täuschungsmanöver in zeitalterübergreifender Kriegführung und wie diese Prinzipien auf autonome Drohnenschwärme übertragen werden.",
+      "takeaway": "Auch im Zeitalter autonomer Systeme bleibt strategische Täuschung der Schlüssel zur Überlebensfähigkeit auf dem Schlachtfeld."
+    },
+    {
+      "title": "Neue EU-Strategie: Ein eigener Plan für die Arktis",
+      "source": "Stiftung Wissenschaft und Politik",
+      "link": "https://www.tagesschau.de/ausland/europa/eu-arktis-strategie-100.html",
+      "summary": "Die EU reagiert auf die veränderte Lage im Hohen Norden und präsentiert eine neue Arktis-Strategie für wirtschaftliche, ökologische und militärische Belange.",
+      "takeaway": "Europa beansprucht eine aktivere Rolle in der geopolitisch immer bedeutsameren Arktisregion."
     }
   ],
   "ai": [
     {
-      "title": "Von Chatbots zu autonomen Workflow-Agenten",
-      "source": "The AI Daily Brief",
-      "link": "https://www.heise.de",
-      "summary": "Der Schwerpunkt in der praktischen KI-Nutzung verlagert sich von einfachen Frage-Antwort-Modellen hin zu mehrstufigen Agenten-Pipelines mit Tool-Use.",
-      "takeaway": "Modelle entfalten ihren Wert vor allem dort, wo sie deterministische API-Aufrufe mit flexibler Sprachlogik verbinden."
+      "title": "Qwen 3.6 lokal: Perplexity Computer braucht keine Cloud mehr",
+      "source": "Künstliche Intelligenz",
+      "link": "https://www.heise.de/news/Perplexity-Computer-Lokale-Nutzung-mit-Qwen-3-6-auf-dem-Mac-11496128.html?wt_mc=rss.red.ho.themen.k%C3%BCnstliche+intelligenz.beitrag.beitrag",
+      "summary": "Die Rechnersteuerung von Perplexity lässt sich mittels Qwen 3.6 ohne Cloud-Anbindung direkt auf ausreichend ausgestatteten Apple-Silicon-Macs ausführen.",
+      "takeaway": "Lokale KI-Assistenten gewinnen an Leistungsfähigkeit und steigern Unabhängigkeit sowie Datenschutz im Alltag."
+    },
+    {
+      "title": "Why AI Companies Are Betting Personality Beats Intelligence",
+      "source": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+      "link": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Companies-Are-Betting-Personality-Beats-Intelligence-e3qqj9k",
+      "summary": "Im Wettbewerb führender KI-Modelle rückt die Persönlichkeit und Tonalität der Sprachmodelle gegenüber reiner Intelligenz zunehmend in den Fokus der Entwickler.",
+      "takeaway": "Nutzerbindung entsteht oft über die emotionale Nahbarkeit einer KI, nicht nur über akademische Benchmarks."
     }
   ],
   "med_ai": [
     {
-      "title": "Entlastung im Spitalsalltag: Strukturierte Arztbriefe per KI",
-      "source": "kma Online",
-      "link": "https://www.kma-online.de",
-      "summary": "Pilottests zeigen, dass Ärztinnen und Ärzte bis zu 40 Minuten administrative Zeit pro Schicht einsparen, wenn Vorbefunde und Notizen automatisch vorsortiert werden.",
-      "takeaway": "Bürokratieabbau im Gesundheitswesen funktioniert am besten, wenn der Arzt nur noch korrigiert statt neu formuliert."
+      "title": "[Editorial] Epilepsy research in the AI era",
+      "source": "The Lancet Digital Health",
+      "link": "https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00138-X/fulltext?rss=yes",
+      "summary": "Der US-Senat treibt den 'National Plan for Epilepsy Act' voran, um die Erforschung neurologischer Erkrankungen mithilfe moderner KI-Methoden massiv auszubauen.",
+      "takeaway": "Staatliche Initiativen schaffen die nötigen Rahmenbedingungen für den Durchbruch von KI in der Epilepsieforschung."
+    },
+    {
+      "title": "[Comment] Need for ethical use of artificial intelligence in humanitarian data collection to address aid shortfalls",
+      "source": "The Lancet Digital Health",
+      "link": "https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00068-3/fulltext?rss=yes",
+      "summary": "Angesichts gekürzter Hilfsgelder wird der Einsatz von KI bei der Datenerhebung in Krisengebieten unverzichtbar, bringt jedoch strikte ethische Herausforderungen mit sich.",
+      "takeaway": "Effizienzgewinne durch KI im humanitären Sektor dürfen keinesfalls auf Kosten von Datenschutz und Ethik erzielt werden."
     }
   ],
   "rapid": [
     {
-      "title": "Vorbereitung auf das nächste Bundesliga-Duell in Hütteldorf",
-      "source": "Laola1 / Bundesliga",
-      "link": "https://www.laola1.at",
-      "summary": "Das Trainerteam feilt an den personellen Optionen für die Startelf. Besonderer Fokus liegt auf der Chancenverwertung und dem schnellen Umschaltspiel.",
-      "takeaway": "Stabilität im Mittelfeldzentrum bleibt der Schlüssel für die nächsten Runden."
+      "title": "Partnerschaft mit stackwork - SK Rapid",
+      "source": "\"\"SK Rapid\" OR \"Rapid Wien\"\" - Google News",
+      "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTFBybVJhUG1aS0U0eHE3Vy1WdzZrMHJ4eHhjOWV0SXB2RExmckJLMmh5RFRWNmZyTjJNSVg1LWRjV0FNR0Jadkk4WnE0N3dxR1J1VU44T0hXVGhQOV9YOVBEbTZybm53SE05dWpRMGxhaWw5MW84Si1LNg?oc=5",
+      "summary": "Der SK Rapid verkündet eine offizielle neue Partnerschaft mit dem Technologieunternehmen stackwork.",
+      "takeaway": "Grün-Weiß baut sein digitales Netzwerk und Sponsorenportfolio weiter aus."
+    },
+    {
+      "title": "Gewinnspiel: Gewinne VIP-Tickets für das 351. Wiener Derby zwischen Austria und Rapid - Sky Sport Austria",
+      "source": "\"\"SK Rapid\" OR \"Rapid Wien\"\" - Google News",
+      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOMzlBaTdpNFRuMGJzWC1McFdMZDZONmFmTVBpX3BLNzFMeTdKcVpmWGJyU2xmcThPVXQ2bnhuU0hjdll0RjU3Mm5wUGhpcWdHSDhZN2tSVXRXWXh0eXJpZlUxZExuRTcwVWFFZk8wWkFOR0NNSHZqNXlJN19KakZKRi1GQnlYVG02ODhCclZueDRzWXBXU3JueUJlWGU5RDNsQ2xVQktBR0c1QWh6VGtqUmpHcWlTV0k?oc=5", "summary": "Sky Sport Austria verlost exklusive VIP-Karten für das bevorstehende 351. Wiener Stadtderby.",
+      "takeaway": "Das Aufeinandertreffen der beiden Erzrivalen wirft bereits seine Schatten voraus."
     }
   ],
-  "darts": [
-    {
-      "title": "PDC ProTour & Major-Vorschau: Formkurven der Top-Akteure",
-      "source": "Dartsnews.de",
-      "link": "https://www.dartsnews.de",
-      "summary": "Hohe Averages und knappe Decider prägen die aktuellen Turniertage. Das Rennen um die Qualifikationsplätze für die kommenden TV-Turniere spitzt sich zu.",
-      "takeaway": "Konstanz auf den Doppel-Feldern entscheidet die engen Partien ab den Viertelfinals."
-    }
-  ]
+  "darts": []
 }
