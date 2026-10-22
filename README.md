@@ -30,7 +30,8 @@ Podcast-Folgen holt sie sich bei jedem Lauf von der live-Seite zurück.
    Wichtig: *Repository secret*, nicht „Variable“ und nicht als Secret der Umgebung `github-pages`.
 3. Actions → „Tägliche Zeitung generieren“ → *Run workflow*.
 
-Danach läuft alles von selbst: jeden Morgen eine neue Ausgabe, Änderungen an `index.html` gehen beim Push sofort live.
+Danach läuft alles von selbst: jeden Morgen eine neue Ausgabe. Ein Push auf `main` stellt Änderungen sofort live –
+neue Feeds in `feeds.json` bringen gleich eine neue Ausgabe, Änderungen an der Oberfläche nur die neue Oberfläche.
 
 ## Feeds & Einstellungen
 
