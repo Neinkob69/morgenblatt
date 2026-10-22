@@ -17,22 +17,42 @@
     "stimme_gemini": "Charon",
     "stimme_edge": "de-AT-JonasNeural"
   },
+  "wetter": {
+    "ort": "Wien",
+    "lat": 48.21,
+    "lon": 16.37
+  },
+  "boerse": {
+    "indizes": [
+      {"name": "ATX", "symbol": "^ATX"},
+      {"name": "DAX", "symbol": "^GDAXI"},
+      {"name": "S&P 500", "symbol": "^GSPC"},
+      {"name": "Gold", "symbol": "GC=F"},
+      {"name": "Bitcoin", "symbol": "BTC-EUR"}
+    ],
+    "aktien": [
+      {"name": "Erste Group", "symbol": "EBS.VI"},
+      {"name": "OMV", "symbol": "OMV.VI"},
+      {"name": "Verbund", "symbol": "VER.VI"},
+      {"name": "voestalpine", "symbol": "VOE.VI"},
+      {"name": "Raiffeisen", "symbol": "RBI.VI"},
+      {"name": "BAWAG", "symbol": "BG.VI"},
+      {"name": "Andritz", "symbol": "ANDR.VI"},
+      {"name": "Wienerberger", "symbol": "WIE.VI"},
+      {"name": "Österr. Post", "symbol": "POST.VI"},
+      {"name": "Telekom Austria", "symbol": "TKA.VI"},
+      {"name": "UNIQA", "symbol": "UQA.VI"},
+      {"name": "VIG", "symbol": "VIG.VI"}
+    ]
+  },
+  "der_tag": true,
   "ressorts": [
-    {
-      "id": "med_ai",
-      "name": "Klinik-IT",
-      "icon": "🏥",
-      "feeds": [
-        {"url": "https://www.thelancet.com/rssfeed/landig_online.xml", "max_alter_tage": 14, "max_artikel": 4},
-        "https://www.kma-online.de/dienste/feeds/aktuelles.xml",
-        "https://www.heise.de/thema/Gesundheit.xml"
-      ]
-    },
     {
       "id": "ai",
       "name": "Künstliche Intelligenz",
       "kurz": "KI",
       "icon": "🤖",
+      "farbe": "violett",
       "feeds": [
         "https://anchor.fm/s/f7cac464/podcast/rss",
         "https://www.oneusefulthing.org/feed",
@@ -44,10 +64,56 @@
       "name": "Geopolitik & Sicherheit",
       "kurz": "Geopolitik",
       "icon": "🌍",
+      "farbe": "blau",
       "feeds": [
         {"url": "https://sicherheitspod.de/feed/", "max_alter_tage": 14},
         "https://warontherocks.com/feed/",
         "https://www.swp-berlin.org/rss.xml"
+      ]
+    },
+    {
+      "id": "med_ai",
+      "name": "Klinik-IT",
+      "icon": "🏥",
+      "farbe": "tuerkis",
+      "feeds": [
+        {"url": "https://www.thelancet.com/rssfeed/landig_online.xml", "max_alter_tage": 14, "max_artikel": 4},
+        "https://www.kma-online.de/dienste/feeds/aktuelles.xml",
+        "https://www.heise.de/thema/Gesundheit.xml"
+      ]
+    },
+    {
+      "id": "finanzen",
+      "name": "Börse & Finanzen",
+      "kurz": "Börse",
+      "icon": "📈",
+      "farbe": "gold",
+      "kurszettel": true,
+      "feeds": [
+        {"url": "https://boerse-social.com/feed", "max_artikel": 6},
+        {"url": "https://news.google.com/rss/search?q=ATX+OR+%22Wiener+B%C3%B6rse%22&hl=de-AT&gl=AT&ceid=AT:de", "max_artikel": 6},
+        {"url": "https://www.derstandard.at/rss/wirtschaft", "max_artikel": 6}
+      ]
+    },
+    {
+      "id": "wissenschaft",
+      "name": "Wissenschaft",
+      "kurz": "Wissen",
+      "icon": "🔬",
+      "farbe": "petrol",
+      "feeds": [
+        {"url": "https://www.derstandard.at/rss/wissenschaft", "max_artikel": 5},
+        {"url": "https://www.spektrum.de/alias/rss/spektrum-de-rss-feed/996406", "max_artikel": 5},
+        {"url": "https://www.quantamagazine.org/feed/", "max_alter_tage": 7, "max_artikel": 3}
+      ]
+    },
+    {
+      "id": "wien",
+      "name": "Wien",
+      "icon": "🏛️",
+      "farbe": "rot",
+      "feeds": [
+        {"url": "https://rss.orf.at/wien.xml", "max_artikel": 6}
       ]
     },
     {
@@ -66,6 +132,7 @@
       "name": "Darts",
       "icon": "🎯",
       "telegramm": true,
+      "farbe": "orange",
       "feeds": [
         "https://news.google.com/rss/search?q=Darts+PDC&hl=de-AT&gl=AT&ceid=AT:de",
         "https://www.dartn.de/feed/"

@@ -31,6 +31,21 @@ jobs:
     steps:
       - name: Auschecken des Repositories
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # damit sich vergleichen lässt, was ein Push geändert hat
+
+      # Push nur an der Oberfläche → Ausgabe bleibt; neue Feeds oder Pipeline → neue Ausgabe
+      - name: Was hat der Push geändert?
+        id: changes
+        if: github.event_name == 'push'
+        run: |
+          files=$(git diff --name-only "${{ github.event.before }}" HEAD 2>/dev/null) || files="unbekannt"
+          echo "$files"
+          if echo "$files" | grep -qE '^(feeds\.json|update_newspaper\.py|requirements\.txt|unbekannt)$'; then
+            echo "nur_frontend=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "nur_frontend=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Python einrichten
         uses: actions/setup-python@v5
@@ -51,8 +66,7 @@ jobs:
           MORGENBLATT_PASSWORT: ${{ secrets.MORGENBLATT_PASSWORT }}
           SITE_URL: ${{ steps.pages.outputs.base_url }}
           OUT_DIR: _site
-          # Push nur an der Oberfläche → Ausgabe bleibt; neue Feeds oder Pipeline → neue Ausgabe
-          NUR_FRONTEND: ${{ (github.event_name == 'push' && !contains(toJSON(github.event.commits), 'feeds.json') && !contains(toJSON(github.event.commits), 'update_newspaper.py') && !contains(toJSON(github.event.commits), 'requirements.txt')) || inputs.nur_frontend }}
+          NUR_FRONTEND: ${{ steps.changes.outputs.nur_frontend == 'true' || inputs.nur_frontend }}
         run: |
           mkdir -p _site
           cp -r index.html sw.js manifest.webmanifest icons _site/

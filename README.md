@@ -12,7 +12,8 @@ feeds.json ──► GitHub Action (täglich) ──► update_newspaper.py ─�
                                              │
                                              ├─ Feeds holen, Volltext aus dem XML bzw. von der Artikelseite
                                              ├─ HTML bereinigen (nh3) – keine Skripte, kein Tracking
-                                             ├─ Gemini: Zusammenfassungen, Titelseite, Leitartikel, Briefing
+                                             ├─ Wetter (Open-Meteo), Kurszettel (Yahoo Finance, EZB), Der Tag (Wikipedia, kuriose-feiertage.de)
+                                             ├─ Gemini: Zusammenfassungen, Titelseite, Leitartikel, Fakt des Tages, Briefing
                                              ├─ Briefing sprechen (Gemini-TTS, sonst edge-tts) → MP3 + Podcast-Feed
                                              └─ Ausgabe verschlüsseln, Archiv der letzten 14 Tage pflegen
 ```
@@ -40,6 +41,15 @@ wie viele Artikel pro Feed, wie lange das Archiv reicht, Podcast-Stimmen.
 Feeds dürfen als URL oder als `{"url": "...", "name": "...", "max_alter_tage": 60, "max_artikel": 3}`
 eingetragen sein – praktisch für Fachjournale, die nur alle paar Wochen ein neues Heft bringen.
 Liefert eine Adresse statt des Feeds eine Webseite, sucht die Action dort nach dem verlinkten Feed.
+Mit `"ohne": ["[premium]"]` fliegen Artikel mit diesen Wörtern im Titel raus (z. B. Bezahlartikel).
+
+Außerdem in `feeds.json`:
+
+- `wetter` – Ort und Koordinaten für die Tagesprognose im Zeitungskopf
+- `boerse` – Indizes und Aktien für den Kurszettel (Yahoo-Finance-Kürzel, z. B. `EBS.VI` für die Erste Group);
+  das Ressort mit `"kurszettel": true` zeigt die Aktien als Tabelle
+- `der_tag` – Kasten mit Aktionstagen, Namenstagen und Fakt des Tages
+- `farbe` je Ressort – Bühnenlicht im Karussell (`violett`, `blau`, `tuerkis`, `gold`, `petrol`, `rot`, `gruen`, `orange`, `pink`, `grau`)
 
 - **Ohne KI:** Fehlt `GEMINI_API_KEY` oder streikt Gemini, erscheint die Ausgabe trotzdem – nur ohne Zusammenfassungen.
   Ist das Hauptmodell überlastet, weicht die Action auf Ersatzmodelle aus.
@@ -70,8 +80,11 @@ In der App selbst spielt der Player die MP3 mit Kapiteln, auch über Sperrbildsc
 
 ## Ansichten
 
-- **Zeitung** – Titelseite mit Leitartikel, „Das Wichtigste heute“, Telegramm, darunter alle Ressorts.
-  Oben rechts lässt sich jede Ausgabe der letzten 14 Tage aus dem Archiv aufschlagen.
+- **Zeitung** – Titelseite mit Wetter, Kurszettel, Leitartikel, „Das Wichtigste heute“, Telegramm und „Der Tag“,
+  darunter alle Ressorts. Oben rechts lässt sich jede Ausgabe der letzten 14 Tage aus dem Archiv aufschlagen.
+- **Karussell** – wie die Song-Auswahl bei SingStar: Die Artikel drehen sich als Cover in einer Endlosschleife.
+  Wischen, Pfeiltasten oder Mausrad blättern, ↑ ↓ wechselt das Ressort, 🎲 rollt zu einem zufälligen Artikel,
+  „Hörprobe“ liest die Zusammenfassung vor (mit „Auto“ bei jedem Cover).
 - **Nano** – iPod-Menü mit Click Wheel: Rad drehen zum Blättern, Mitte = auswählen, MENU = zurück.
   Auch per Tastatur (↑ ↓ ↵ Esc) und Antippen. Im Abenddruck wird's der schwarze nano.
 

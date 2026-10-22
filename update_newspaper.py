@@ -264,6 +264,8 @@ def collect_articles(config):
             title_key = (section["id"], art["title"].lower())
             if (published and published < cutoff) or art["id"] in seen or title_key in seen:
                 continue
+            if any(word.lower() in art["title"].lower() for word in feed_cfg.get("ohne", [])):
+                continue  # z. B. Bezahlartikel: "ohne": ["[premium]"]
             seen.update({art["id"], title_key})
             articles.append(art)
             count += 1
@@ -386,9 +388,26 @@ Artikel:
                     art[key] = (item.get(key) or "").strip() or art[key]
 
 
-def edit_front_page(client, articles, sections):
+def describe_extras(extras, date):
+    """Wetter, Börse und Der Tag als Stichworte für die KI."""
+    lines = [f"Datum: {german_date(date.isoformat())}"]
+    if w := extras.get("weather"):
+        lines.append(f"Wetter in {w['place']}: {w['text']}, {w['min']} bis {w['max']} Grad, Regenrisiko {w['rain_chance']} %, Wind bis {w['wind']} km/h")
+    if markets := extras.get("markets"):
+        lines.append("Börse (Schluss Vortag): " + ", ".join(f"{m['name']} {m['value']} ({m['change']:+.1f} %)" for m in markets))
+    today = extras.get("today") or {}
+    if today.get("observances"):
+        lines.append("Aktionstage heute: " + "; ".join(today["observances"]))
+    if today.get("name_days"):
+        lines.append("Namenstage: " + ", ".join(today["name_days"]))
+    events = "\n".join(f"  {i}: {e['year']} – {e['text']}" for i, e in enumerate(today.get("events", [])))
+    return "\n".join(lines), events
+
+
+def edit_front_page(client, articles, sections, extras, date):
     """Gemini wählt nur IDs aus und schreibt Texte – Links und Titel kommen nie aus der KI."""
     telegram = {s["id"] for s in sections if s.get("telegramm")}
+    context, events = describe_extras(extras, date)
     overview = [
         {"id": a["id"], "ressort": a["section"], "quelle": a["source"], "titel": a["headline"], "zusammenfassung": a["summary"]}
         for a in articles
@@ -403,16 +422,24 @@ Hier sind alle Meldungen des Tages. Stelle die Titelseite zusammen:
   Wie eine entspannte Wiener Morgensendung: natürlich, mit Übergängen zwischen den Meldungen.
   Keine Aufzählungszeichen, keine URLs, keine Emojis. Abkürzungen und Zahlen so schreiben,
   wie man sie spricht ("zum Beispiel" statt "z. B.").
-  "intro": Begrüßung mit dem Tagesüberblick (3–4 Sätze).
-  "chapters": je Ressort mit Meldungen ein Kapitel: die 2–4 wichtigsten Meldungen in 6–10 Sätzen.
+  "intro": Begrüßung mit Datum, kurz dem Wetter, gern einem Aktionstag, dann der Tagesüberblick (4–5 Sätze).
+  "chapters": je Ressort mit Meldungen ein Kapitel: die 2–4 wichtigsten Meldungen in 5–9 Sätzen,
+  Sport und Lokales kürzer. Im Finanz-Kapitel darfst du die Börsenkurse nennen.
   "outro": 1–2 Sätze zum Abschluss.
-  Insgesamt etwa 700–1000 Wörter.
+  Insgesamt etwa 900–1200 Wörter.
+- "fact": Fakt des Tages. Wähle aus den Ereignissen unten das überraschendste und formuliere es in einem
+  lebendigen Satz, der mit „Heute vor … Jahren“ beginnt. Nur was im Ereignis steht, nichts dazuerfinden.
 
 Ressorts: {json.dumps(ressorts, ensure_ascii=False)}
 
+{context}
+Ereignisse an diesem Tag (Index: Jahr – Text):
+{events or "  (keine)"}
+
 Antworte als JSON:
 {{"lead_id": "...", "top_ids": ["...", "...", "..."],
-  "briefing": {{"intro": "...", "chapters": [{{"section": "<ressort-id>", "text": "..."}}], "outro": "..."}}}}
+  "briefing": {{"intro": "...", "chapters": [{{"section": "<ressort-id>", "text": "..."}}], "outro": "..."}},
+  "fact": {{"index": 0, "text": "..."}}}}
 
 Meldungen:
 {json.dumps(overview, ensure_ascii=False)}"""
@@ -447,9 +474,173 @@ def pick_front_page_without_ai(articles, telegram):
     return lead, top
 
 
-# ───────────────────────── 4. Ausgabe schreiben ─────────────────────────
+# ───────────────────────── 4. Rund um die Zeitung: Wetter, Börse, Der Tag ─────────────────────────
 
-def build_briefing(sections, articles, ai_briefing):
+# WMO-Wettercodes von Open-Meteo → Symbol und Beschreibung
+WEATHER_CODES = {
+    0: ("☀️", "sonnig"), 1: ("🌤️", "überwiegend sonnig"), 2: ("⛅", "teils bewölkt"), 3: ("☁️", "bedeckt"),
+    45: ("🌫️", "Nebel"), 48: ("🌫️", "Reifnebel"), 51: ("🌦️", "leichter Nieselregen"), 53: ("🌦️", "Nieselregen"),
+    55: ("🌧️", "starker Nieselregen"), 56: ("🌧️", "gefrierender Niesel"), 57: ("🌧️", "gefrierender Niesel"),
+    61: ("🌧️", "leichter Regen"), 63: ("🌧️", "Regen"), 65: ("🌧️", "starker Regen"), 66: ("🌧️", "gefrierender Regen"),
+    67: ("🌧️", "gefrierender Regen"), 71: ("🌨️", "leichter Schneefall"), 73: ("🌨️", "Schneefall"), 75: ("❄️", "starker Schneefall"),
+    77: ("🌨️", "Schneegriesel"), 80: ("🌦️", "Regenschauer"), 81: ("🌧️", "kräftige Schauer"), 82: ("⛈️", "heftige Schauer"),
+    85: ("🌨️", "Schneeschauer"), 86: ("🌨️", "Schneeschauer"), 95: ("⛈️", "Gewitter"), 96: ("⛈️", "Gewitter mit Hagel"),
+    99: ("⛈️", "Gewitter mit Hagel"),
+}
+
+
+def get_bytes(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Morgenblatt; persönlicher RSS-Reader)"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read()
+
+
+def get_json(url):
+    return json.loads(get_bytes(url))
+
+
+def fetch_weather(cfg):
+    """Tagesprognose von Open-Meteo (frei, ohne Key). Tagsüber zählt, was zwischen 8 und 20 Uhr passiert."""
+    query = urllib.parse.urlencode({
+        "latitude": cfg.get("lat", 48.21), "longitude": cfg.get("lon", 16.37), "timezone": "Europe/Vienna", "forecast_days": 1,
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset,uv_index_max",
+        "hourly": "temperature_2m,precipitation_probability,weather_code",
+    })
+    data = get_json(f"https://api.open-meteo.com/v1/forecast?{query}")
+    daily, hourly = data["daily"], data["hourly"]
+    daytime = range(8, 21)
+    codes = [hourly["weather_code"][h] for h in daytime]
+    code = max(set(codes), key=lambda c: (codes.count(c), c))  # häufigstes Wetter, bei Gleichstand das „schlechtere“
+    icon, text = WEATHER_CODES.get(code, ("🌡️", "wechselhaft"))
+    slot = lambda h: {
+        "hour": h, "temp": round(hourly["temperature_2m"][h]), "rain": hourly["precipitation_probability"][h],
+        "icon": WEATHER_CODES.get(hourly["weather_code"][h], ("🌡️", ""))[0],
+    }
+    return {
+        "place": cfg.get("ort", "Wien"), "icon": icon, "text": text,
+        "min": round(daily["temperature_2m_min"][0]), "max": round(daily["temperature_2m_max"][0]),
+        "rain_chance": max(hourly["precipitation_probability"][h] for h in daytime),
+        "rain_mm": daily["precipitation_sum"][0], "wind": round(daily["wind_speed_10m_max"][0]),
+        "uv": daily["uv_index_max"][0], "sunrise": daily["sunrise"][0][11:16], "sunset": daily["sunset"][0][11:16],
+        "hours": [slot(h) for h in (8, 12, 16, 20)],
+    }
+
+
+def fetch_quote(item):
+    """Schlusskurs vom Vortag samt Veränderung (Yahoo Finance)."""
+    data = get_json(f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(item['symbol'])}?range=5d&interval=1d")
+    result = data["chart"]["result"][0]
+    closes = [c for c in result["indicators"]["quote"][0]["close"] if c is not None]
+    if len(closes) < 2:
+        raise ValueError("zu wenige Kurse")
+    return {"name": item["name"], "value": round(closes[-1], 2), "change": round((closes[-1] / closes[-2] - 1) * 100, 2),
+            "currency": result["meta"].get("currency", "")}
+
+
+def fetch_eurusd():
+    """EZB-Referenzkurs, verglichen mit dem Vortag."""
+    import xml.etree.ElementTree as ET
+
+    ns = {"e": "http://www.ecb.int/vocabulary/2002-08-01/eurofxref"}
+    root = ET.fromstring(get_bytes("https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml"))
+    rates = [float(day.find("e:Cube[@currency='USD']", ns).get("rate")) for day in root.findall(".//e:Cube[@time]", ns)[:2]]
+    return {"name": "EUR/USD", "value": rates[0], "change": round((rates[0] / rates[1] - 1) * 100, 2), "currency": ""}
+
+
+def fetch_markets(cfg):
+    jobs = [(item, "index") for item in cfg.get("indizes", [])] + [(item, "aktie") for item in cfg.get("aktien", [])]
+
+    def work(job):
+        item, kind = job
+        try:
+            return {**fetch_quote(item), "kind": kind}
+        except Exception as e:
+            print(f"  ✗ Kurs {item['name']}: {e}")
+            return None
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        quotes = [q for q in pool.map(work, jobs) if q]
+    if cfg.get("eur_usd", True):
+        try:
+            quotes.insert(min(1, len(quotes)), {**fetch_eurusd(), "kind": "devisen"})
+        except Exception as e:
+            print(f"  ✗ EUR/USD: {e}")
+    return quotes
+
+
+def wiki_text(text):
+    return re.sub(r"\s+", " ", text.replace("­", "")).strip()
+
+
+def fetch_today(date):
+    """Namenstage, Gedenk- und Aktionstage, „Heute vor … Jahren“ (Wikipedia) und kuriose Feiertage."""
+    today = {"name_days": [], "observances": [], "events": []}
+    path = f"{date.month:02d}/{date.day:02d}"
+    try:
+        for item in get_json(f"https://api.wikimedia.org/feed/v1/wikipedia/de/onthisday/holidays/{path}")["holidays"]:
+            header, _, rest = wiki_text(item["text"].replace("\n", " | ")).partition(" | ")
+            entries = [e.strip() for e in rest.split(" | ") if e.strip()]
+            if header.startswith("Namenstag"):
+                today["name_days"] += [n.strip() for e in entries for n in e.split(",") if n.strip()]
+            elif "Aktionstag" in header or "Gedenk- und" in header or ("Staatlich" in header and any("Österreich" in e for e in entries)):
+                today["observances"] += [re.sub(r"\s*\(.*?\)$", "", e) for e in entries]
+    except Exception as e:
+        print(f"  ✗ Wikipedia-Gedenktage: {e}")
+    try:
+        events = get_json(f"https://api.wikimedia.org/feed/v1/wikipedia/de/onthisday/selected/{path}")["selected"]
+        today["events"] = [{"year": e["year"], "ago": date.year - e["year"], "text": wiki_text(e["text"])} for e in events if e.get("year")][:10]
+    except Exception as e:
+        print(f"  ✗ Wikipedia-Ereignisse: {e}")
+    parsed, error = fetch_feed({"url": "https://www.kuriose-feiertage.de/feed/"})
+    for entry in (parsed.entries if parsed else []):
+        published = entry_date(entry)
+        if published and published.astimezone(TZ).strftime("%m-%d") == date.strftime("%m-%d"):
+            today["observances"].append(to_text(entry.get("title", "")).split(" – ")[0].strip())
+    if error:
+        print(f"  ✗ Kuriose Feiertage: {error}")
+    today["observances"] = list(dict.fromkeys(o for o in today["observances"] if o))[:6]
+    return today
+
+
+def pick_anniversary(events):
+    """Ohne KI: das Ereignis mit dem rundesten Jahrestag."""
+    if not events:
+        return None
+    roundness = lambda e: next((score for score, step in ((3, 100), (2, 50), (1, 25), (0.5, 10)) if e["ago"] % step == 0), 0)
+    return max(events, key=roundness)
+
+
+def collect_extras(config, date):
+    extras = {}
+    if config.get("wetter"):
+        try:
+            extras["weather"] = fetch_weather(config["wetter"])
+            w = extras["weather"]
+            print(f"  ✓ Wetter {w['place']}: {w['text']}, {w['min']}–{w['max']} °C")
+        except Exception as e:
+            print(f"  ✗ Wetter: {e}")
+    if config.get("boerse"):
+        extras["markets"] = fetch_markets(config["boerse"])
+        print(f"  ✓ Börse: {len(extras['markets'])} Kurse")
+    if config.get("der_tag", True):
+        extras["today"] = fetch_today(date)
+        t = extras["today"]
+        print(f"  ✓ Der Tag: {len(t['observances'])} Aktionstage, {len(t['name_days'])} Namenstage, {len(t['events'])} Ereignisse")
+    return extras
+
+
+# ───────────────────────── 4b. Ausgabe schreiben ─────────────────────────
+
+def greeting_without_ai(extras, date):
+    parts = [f"Guten Morgen! Heute ist {german_date(date.isoformat())}."]
+    if w := extras.get("weather"):
+        parts.append(f"In {w['place']} wird es {w['text']} bei {w['min']} bis {w['max']} Grad.")
+    if observances := (extras.get("today") or {}).get("observances"):
+        parts.append(f"Und heute ist {observances[0]}.")
+    return " ".join(parts)
+
+
+def build_briefing(sections, articles, ai_briefing, greeting=""):
     names = {s["id"]: s.get("kurz") or s["name"] for s in sections}
     if ai_briefing and ai_briefing.get("chapters"):
         chapters = [{"id": "intro", "title": "Begrüßung", "text": ai_briefing.get("intro", "")}]
@@ -461,7 +652,7 @@ def build_briefing(sections, articles, ai_briefing):
             chapters.append({"id": "outro", "title": "Ausklang", "text": ai_briefing["outro"]})
         return [c for c in chapters if c["text"]]
 
-    chapters = []
+    chapters = [{"id": "intro", "title": "Begrüßung", "text": greeting}] if greeting else []
     for s in sections:
         items = [a for a in articles if a["section"] == s["id"]][:2]
         if items:
@@ -482,6 +673,9 @@ def build_edition(config):
     sections = config["ressorts"]
     telegram = {s["id"] for s in sections if s.get("telegramm")}
 
+    date = datetime.now(TZ).date()
+    print("Hole Wetter, Börse und Der Tag …")
+    extras = collect_extras(config, date)
     print("Hole Feeds …")
     articles, feed_status = collect_articles(config)
     if not articles:
@@ -502,7 +696,7 @@ def build_edition(config):
         client = genai.Client(api_key=api_key)
         print(f"KI-Redaktion mit {GEMINI_MODEL} (Ausweichmodelle: {', '.join(GEMINI_FALLBACK_MODELS)}) …")
         summarize(client, articles)
-        front = edit_front_page(client, articles, sections)
+        front = edit_front_page(client, articles, sections, extras, date)
     else:
         print("Kein GEMINI_API_KEY – Ausgabe erscheint ohne KI-Redaktion.")
 
@@ -526,9 +720,19 @@ def build_edition(config):
     if not PASSWORD:
         strip_fulltext(articles)
 
+    today = extras.get("today")
+    if today is not None:
+        events = today.get("events", [])
+        fact = (front or {}).get("fact") or {}
+        index = fact.get("index")
+        if isinstance(index, int) and 0 <= index < len(events) and fact.get("text"):
+            today["fact"] = {"text": fact["text"].strip(), "year": events[index]["year"]}
+        elif best := pick_anniversary(events):
+            today["fact"] = {"text": f"Heute vor {best['ago']} Jahren: {best['text']}", "year": best["year"]}
+
     edition = {
         "version": 2,
-        "date": datetime.now(TZ).date().isoformat(),
+        "date": date.isoformat(),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "ai": bool(front),
         "private": bool(PASSWORD),
@@ -543,13 +747,15 @@ def build_edition(config):
                 "icon": s.get("icon", "📰"),
                 "telegram": bool(s.get("telegramm")),
                 "color": s.get("farbe", ""),
+                "markets": bool(s.get("kurszettel")),
                 "feeds": [feed_status[f["url"]] for f in feed_list(s)],
             }
             for s in sections
         ],
         "lead": {"article": lead["id"], **{k: lead_text.get(k, "") for k in ("headline", "subline", "text", "takeaway")}},
         "top": top,
-        "briefing": build_briefing(sections, articles, front and front.get("briefing")),
+        "briefing": build_briefing(sections, articles, front and front.get("briefing"), greeting_without_ai(extras, date)),
+        **{key: extras[key] for key in ("weather", "markets", "today") if extras.get(key) is not None},
         "articles": articles,
     }
     return edition, client
