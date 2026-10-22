@@ -1,0 +1,52 @@
+{
+  "deep_dive": {
+    "title": "Ambient Clinical Intelligence & Workflow-Automatisierung",
+    "summary": "Klinische Sprachmodelle verändern derzeit die Dokumentation in europäischen Krankenhäusern grundlegend. Durch automatisierte Strukturierung von Visiten und Entlassungsbriefen sinkt die manuelle KIS-Erfassungszeit deutlich.",
+    "takeaway": "Entscheidend ist nicht das größte Sprachmodell, sondern die nahtlose Einbettung in bestehende Klinik-Informationssysteme (KIS) und Schnittstellen."
+  },
+  "geopolitik": [
+    {
+      "title": "Europäische Sicherheitsarchitektur und neue Verteidigungsdoktrinen",
+      "source": "Sicherheitspod / SWP",
+      "link": "https://www.swp-berlin.org",
+      "summary": "Analysen zur Neuausrichtung konventioneller Streitkräfte, Munitionsbeschaffung und der strategischen Rolle unbemannter Systeme im modernen Gefecht.",
+      "takeaway": "Abschreckung erfordert industrielle Kapazitäten und logistische Tiefe, nicht nur punktuelle High-End-Waffensysteme."
+    }
+  ],
+  "ai": [
+    {
+      "title": "Von Chatbots zu autonomen Workflow-Agenten",
+      "source": "The AI Daily Brief",
+      "link": "https://www.heise.de",
+      "summary": "Der Schwerpunkt in der praktischen KI-Nutzung verlagert sich von einfachen Frage-Antwort-Modellen hin zu mehrstufigen Agenten-Pipelines mit Tool-Use.",
+      "takeaway": "Modelle entfalten ihren Wert vor allem dort, wo sie deterministische API-Aufrufe mit flexibler Sprachlogik verbinden."
+    }
+  ],
+  "med_ai": [
+    {
+      "title": "Entlastung im Spitalsalltag: Strukturierte Arztbriefe per KI",
+      "source": "kma Online",
+      "link": "https://www.kma-online.de",
+      "summary": "Pilottests zeigen, dass Ärztinnen und Ärzte bis zu 40 Minuten administrative Zeit pro Schicht einsparen, wenn Vorbefunde und Notizen automatisch vorsortiert werden.",
+      "takeaway": "Bürokratieabbau im Gesundheitswesen funktioniert am besten, wenn der Arzt nur noch korrigiert statt neu formuliert."
+    }
+  ],
+  "rapid": [
+    {
+      "title": "Vorbereitung auf das nächste Bundesliga-Duell in Hütteldorf",
+      "source": "Laola1 / Bundesliga",
+      "link": "https://www.laola1.at",
+      "summary": "Das Trainerteam feilt an den personellen Optionen für die Startelf. Besonderer Fokus liegt auf der Chancenverwertung und dem schnellen Umschaltspiel.",
+      "takeaway": "Stabilität im Mittelfeldzentrum bleibt der Schlüssel für die nächsten Runden."
+    }
+  ],
+  "darts": [
+    {
+      "title": "PDC ProTour & Major-Vorschau: Formkurven der Top-Akteure",
+      "source": "Dartsnews.de",
+      "link": "https://www.dartsnews.de",
+      "summary": "Hohe Averages und knappe Decider prägen die aktuellen Turniertage. Das Rennen um die Qualifikationsplätze für die kommenden TV-Turniere spitzt sich zu.",
+      "takeaway": "Konstanz auf den Doppel-Feldern entscheidet die engen Partien ab den Viertelfinals."
+    }
+  ]
+}
