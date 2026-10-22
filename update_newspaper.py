@@ -36,12 +36,12 @@ def run():
         for url in urls:
             try:
                 f = feedparser.parse(url)
-                for entry in f.entries[:5]:
+                for entry in f.entries[:2]: # Begrenzt auf 2 pro Feed für maximale Stabilität
                     raw_data[cat].append({
                         "title": entry.get("title", ""),
                         "source": f.feed.get("title", url),
                         "link": entry.get("link", ""),
-                        "summary": (entry.get("summary", "") or entry.get("description", ""))[:400]
+                        "summary": (entry.get("summary", "") or entry.get("description", ""))[:250]
                     })
             except Exception as e:
                 print(f"Fehler bei {url}: {e}")
@@ -49,11 +49,9 @@ def run():
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     
     prompt = f"""
-    Du bist der Chefredakteur meiner persönlichen Tageszeitung. 
-    Wähle aus den Rohdaten die wertvollsten Stücke aus: max. 2 für Geopolitik, 2 für AI, 2 für Medical AI, je 2 für Sport.
-    Wähle außerdem 1 herausragendes Stück als 'deep_dive' (Leitartikel mit starkem Lern- und Analysewert).
+    Du bist der Chefredakteur meiner persönlichen Tageszeitung. Wähle aus den Rohdaten die wertvollsten Stücke aus: max. 2 pro Kategorie. Wähle 1 herausragendes Stück als 'deep_dive' (Leitartikel).
     
-    Formatiere die Antwort EXAKT als JSON mit folgendem Schema:
+    Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne Markdown-Blöcke oder zusätzlichen Text:
     {{
       "deep_dive": {{
         "title": "...",
@@ -73,8 +71,7 @@ def run():
     
     response = client.models.generate_content(
         model="gemini-3.8-flash",
-        contents=prompt,
-        config={"response_mime_type": "application/json"}
+        contents=prompt
     )
     
     raw_text = response.text.strip()
@@ -86,9 +83,11 @@ def run():
         raw_text = raw_text[:-3]
     raw_text = raw_text.strip()
 
+    json.loads(raw_text)
+
     with open("edition.json", "w", encoding="utf-8") as f:
         f.write(raw_text)
-    print("edition.json erfolgreich bereinigt und erstellt.")
+    print("edition.json erfolgreich erstellt.")
 
 if __name__ == "__main__":
     run()
