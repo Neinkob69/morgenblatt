@@ -81,7 +81,12 @@ def run():
             )
             break  # Erfolgreich! Schleife beenden.
         except Exception as e:
-            if "503" in str(e) or "UNAVAILABLE" in str(e):
+            if (
+                "503" in str(e)
+                or "UNAVAILABLE" in str(e)
+                or "RemoteProtocolError" in str(type(e))
+                or "Server disconnected without sending a response" in str(e)
+            ):
                 if attempt < max_retries - 1:
                     print("Server ist beschäftigt. Warte 30 Sekunden...")
                     time.sleep(30)
