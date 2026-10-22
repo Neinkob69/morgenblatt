@@ -17,7 +17,8 @@
     try {
       const ink = localStorage.getItem('ink');
       if (ink === 'dark' || (!ink && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark-ink');
-      const view = location.hash === '#nano' ? 'nano' : (localStorage.getItem('view') || 'paper');
+      const fromHash = { '#nano': 'nano', '#karussell': 'carousel' }[location.hash];
+      const view = fromHash || localStorage.getItem('view') || 'paper';
       document.documentElement.dataset.view = view;
     } catch (e) {}
   </script>
@@ -125,10 +126,73 @@
     ::-webkit-scrollbar-track { background: var(--paper-bg); }
     ::-webkit-scrollbar-thumb { background: var(--rule-light); }
 
-    /* Ansicht umschalten: Zeitung ⇄ Nano */
+    /* Ansicht umschalten: Zeitung ⇄ Karussell ⇄ Nano */
     html[data-view="nano"] #viewPaper, html[data-view="nano"] #mobileNav { display: none; }
     html:not([data-view="nano"]) #viewNano { display: none; }
     html[data-view="nano"] body { padding-bottom: 0; }
+    html[data-view="carousel"] #viewPaper, html[data-view="carousel"] #mobileNav { display: none; }
+    html:not([data-view="carousel"]) #viewCarousel { display: none; }
+    html[data-view="carousel"] body { padding-bottom: 0; overflow: hidden; }
+
+
+    /* ───────── Rätselecke ───────── */
+    .sudoku-grid { display: grid; grid-template-columns: repeat(9, 1fr); width: 100%; max-width: 440px; aspect-ratio: 1; border: 2px solid var(--rule-heavy); user-select: none; -webkit-user-select: none; }
+    .sd-cell { display: flex; align-items: center; justify-content: center; border: 1px solid var(--rule-light); background: var(--paper-bg); font-family: 'Playfair Display', Georgia, serif; font-size: clamp(17px, 4.6vw, 26px); color: var(--accent-red); line-height: 1; }
+    .sd-cell.given { color: var(--ink-primary); font-weight: 800; }
+    .sd-cell:nth-child(9n+3), .sd-cell:nth-child(9n+6) { border-right: 2px solid var(--rule-heavy); }
+    .sd-cell:nth-child(n+19):nth-child(-n+27), .sd-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--rule-heavy); }
+    .sd-cell.peer { background: var(--paper-elevated); }
+    .sd-cell.same { background: var(--paper-highlight); }
+    .sd-cell.sel { background: color-mix(in srgb, var(--accent-red) 20%, var(--paper-bg)); }
+    .sd-cell.wrong { color: #d11f1f; text-decoration: underline wavy; }
+    .sudoku-pad { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; max-width: 440px; margin-top: 10px; }
+    .sudoku-pad button { border: 1px solid var(--rule-light); padding: 9px 0; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    .sudoku-pad button:hover { border-color: var(--rule-heavy); }
+    /* ───────── KARUSSELL (wie die Song-Auswahl bei SingStar) ───────── */
+    #viewCarousel { --cr: #8F241E; --card-w: min(58vw, 36vh, 300px); position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; overflow: hidden; color: #f4f1ea; background: #0c0b0a; font-family: 'Newsreader', Georgia, serif; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+    .cr-backdrop { position: absolute; inset: -12%; background-size: cover; background-position: center; filter: blur(50px) saturate(1.4) brightness(.32); transition: background-image .6s ease; }
+    .cr-glow { position: absolute; inset: 0; pointer-events: none; animation: crDrift 10s ease-in-out infinite alternate;
+      background: radial-gradient(55% 40% at 50% 40%, color-mix(in srgb, var(--cr) 55%, transparent), transparent 70%),
+                  radial-gradient(35% 30% at 12% 92%, color-mix(in srgb, var(--cr) 40%, transparent), transparent 70%),
+                  radial-gradient(35% 30% at 88% 8%, color-mix(in srgb, var(--cr) 35%, transparent), transparent 70%); }
+    @keyframes crDrift { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.1) rotate(3deg); } }
+    .cr-top { position: relative; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 10px 14px 4px; }
+    .cr-brand { font-family: 'Playfair Display', Georgia, serif; font-weight: 900; font-size: 18px; white-space: nowrap; }
+    .cr-chips { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+    .cr-chips::-webkit-scrollbar { display: none; }
+    .cr-chip, .cr-btn { font: 600 11px/1 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .08em; padding: 8px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.78); background: rgba(255,255,255,.05); white-space: nowrap; }
+    .cr-chip.is-on { background: #f4f1ea; color: #111; border-color: #f4f1ea; }
+    .cr-btn { border-radius: 6px; }
+    .cr-btn.is-on { border-color: color-mix(in srgb, var(--cr) 60%, #fff); color: #fff; }
+    .cr-day { position: relative; z-index: 3; text-align: center; font: 500 11px/1.5 'JetBrains Mono', monospace; letter-spacing: .06em; color: rgba(255,255,255,.62); padding: 2px 14px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cr-stage { position: relative; z-index: 2; flex: 1 1 auto; min-height: 230px; perspective: 1100px; perspective-origin: 50% 42%; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+    .cr-card { position: absolute; left: 50%; top: 50%; width: var(--card-w); aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden; background: var(--c); color: #fff; cursor: pointer; box-shadow: 0 30px 60px -18px rgba(0,0,0,.85); transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .45s ease, filter .45s ease; -webkit-box-reflect: below 6px linear-gradient(transparent 72%, rgba(255,255,255,.16)); }
+    .cr-card:not(.is-center) { filter: brightness(.5) saturate(.75); }
+    .cr-card.is-center { box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 30px 70px -14px color-mix(in srgb, var(--c) 70%, #000); }
+    .cr-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .cr-cover { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; padding: 14px; background: linear-gradient(to top, color-mix(in srgb, var(--c) 92%, #000) 0%, color-mix(in srgb, var(--c) 65%, transparent) 48%, transparent 78%); }
+    .cr-card.no-img .cr-cover { justify-content: space-between; background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.2), transparent 60%), var(--c); }
+    .cr-card.no-img .cr-cover::after { content: ''; position: absolute; left: 14px; right: 14px; top: 34px; border-top: 3px double rgba(255,255,255,.5); }
+    .cr-kicker { font: 700 10px/1 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; opacity: .9; }
+    .cr-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: clamp(16px, calc(var(--card-w) * .085), 26px); line-height: 1.12; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 12px rgba(0,0,0,.35); }
+    .cr-card.no-img .cr-title { font-size: clamp(18px, calc(var(--card-w) * .1), 30px); -webkit-line-clamp: 6; }
+    .cr-src { font: 500 10px/1.2 'JetBrains Mono', monospace; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cr-arrow { position: absolute; top: 45%; z-index: 200; width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #fff; font-size: 26px; line-height: 1; backdrop-filter: blur(6px); }
+    .cr-arrow.left { left: 16px; } .cr-arrow.right { right: 16px; }
+    .cr-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-style: italic; color: rgba(255,255,255,.6); }
+    .cr-info { position: relative; z-index: 3; width: 100%; max-width: 760px; margin: 0 auto; padding: 4px 18px 6px; text-align: center; }
+    .cr-meta { font: 600 10.5px/1.4 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--cr) 35%, #fff); }
+    .cr-headline { font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: clamp(20px, 3.2vw, 32px); line-height: 1.15; margin: 4px 0 6px; }
+    .cr-summary { font-size: 15.5px; line-height: 1.5; color: rgba(244,241,234,.82); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .cr-actions { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+    .cr-action { font: 700 11px/1 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .08em; padding: 12px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); color: #fff; }
+    .cr-action.primary { background: #f4f1ea; color: #111; border-color: #f4f1ea; }
+    .cr-foot { position: relative; z-index: 3; display: flex; justify-content: space-between; gap: 12px; padding: 8px 16px 12px; font: 500 10px/1 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.45); }
+    @media (max-width: 640px) {
+      #viewCarousel { --card-w: min(62vw, 34vh, 280px); }
+      .cr-arrow, .cr-hint, .cr-hide-sm, .cr-brand { display: none; }
+      .cr-foot { justify-content: center; }
+    }
 
     /* ───────── NANO-MODUS (iPod-Menü) ───────── */
     .nano-wrap { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 12px; }
@@ -232,8 +296,14 @@
         <span class="text-[var(--rule-light)]">|</span>
         <button onclick="toggleSourcesModal(true)" class="hover:underline text-[var(--ink-secondary)] hidden sm:inline">Quellen & App</button>
         <span class="text-[var(--rule-light)] hidden sm:inline">|</span>
+        <button id="savedBtn" onclick="setView('paper'); setSection('saved')" class="hidden flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition" title="Merkliste">
+          <span>★</span><span id="savedCount">0</span>
+        </button>
+        <button onclick="setView('carousel')" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition" title="Karussell">
+          <span>◎</span><span class="hidden sm:inline">Karussell</span>
+        </button>
         <button onclick="setView('nano')" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition" title="iPod-Menü">
-          <span>◉</span><span>Nano</span>
+          <span>◉</span><span class="hidden sm:inline">Nano</span>
         </button>
         <button onclick="toggleDarkInk()" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition">
           <span id="themeIcon">☾</span>
@@ -251,9 +321,10 @@
 
         <!-- Linkes Ohr -->
         <div class="lg:col-span-3 order-2 lg:order-1 border border-[var(--rule-light)] p-3 bg-[var(--paper-elevated)]/40 flex lg:flex-col justify-between items-center lg:items-start gap-2">
-          <div>
+          <div class="w-full">
             <div id="editionBadge" class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)] font-semibold">Ausgabe Wien • KI Kuratiert</div>
-            <div class="text-xs text-[var(--ink-secondary)] mt-0.5 leading-snug">Kein Ungelesen-Zähler. Deine wichtigsten Themenpunkte für den Tag.</div>
+            <div id="earText" class="text-xs text-[var(--ink-secondary)] mt-0.5 leading-snug">Kein Ungelesen-Zähler. Deine wichtigsten Themenpunkte für den Tag.</div>
+            <div id="weatherBox" class="hidden"></div>
           </div>
           <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] border-t border-[var(--rule-light)] pt-1.5 w-full hidden lg:flex justify-between">
             <span id="editionCount">JAHRGANG I</span><span>PREIS: 0,00 €</span>
@@ -296,6 +367,7 @@
       </div>
 
       <nav id="sectionNav" class="double-rule-top bold-rule-bottom py-2 flex items-center justify-between overflow-x-auto gap-4 font-mono-meta text-xs uppercase tracking-wider"></nav>
+      <div id="marketStrip" onclick="openFinance()" title="Zum Kurszettel" class="hidden hairline-bottom py-1.5 overflow-x-auto whitespace-nowrap font-mono-meta text-[11px] cursor-pointer"></div>
     </header>
 
     <!-- SEITE 1: ABOVE THE FOLD -->
@@ -343,7 +415,7 @@
         </main>
 
         <!-- SPALTE RECHTS: TELEGRAMM -->
-        <aside class="lg:col-span-3 flex flex-col justify-between gap-6">
+        <aside class="lg:col-span-3 flex flex-col gap-6">
           <div id="telegramBox" class="border-2 border-[var(--rule-heavy)] p-3.5 bg-[var(--paper-elevated)]/50">
             <div class="flex items-center justify-between border-b border-[var(--rule-heavy)] pb-1.5 mb-3">
               <span id="telegramTitle" class="font-mono-meta text-xs font-bold uppercase tracking-widest">Sport-Telegramm</span>
@@ -351,10 +423,23 @@
             </div>
             <div id="rightSidebarContent" class="space-y-4"></div>
           </div>
+          <div id="dayBox" class="hidden border border-[var(--rule-heavy)] p-3.5">
+            <div class="flex items-center justify-between border-b border-[var(--rule-heavy)] pb-1.5 mb-3">
+              <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Der Tag</span>
+              <span id="dayDate" class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]"></span>
+            </div>
+            <div id="dayContent" class="space-y-3 text-sm"></div>
+          </div>
         </aside>
 
       </div>
     </section>
+
+    <!-- WOCHENENDE: Die Woche (Sonntag) & lange Lesestücke -->
+    <div id="frontExtras">
+      <section id="weekBlock" class="hidden mt-8 pb-8 double-rule-bottom"></section>
+      <section id="longreadsBlock" class="hidden mt-8 pb-8 double-rule-bottom"></section>
+    </div>
 
     <!-- ALLE ARTIKEL -->
     <section class="mt-8">
@@ -409,6 +494,36 @@
     <div id="mobileNavItems" class="flex items-center justify-around overflow-x-auto font-mono-meta text-[10px] uppercase"></div>
   </nav>
 
+  <!-- KARUSSELL -->
+  <div id="viewCarousel" aria-label="Karussell">
+    <div class="cr-backdrop" id="crBackdrop"></div>
+    <div class="cr-glow"></div>
+    <div class="cr-top">
+      <div class="cr-brand" id="crBrand">MORGENBLATT</div>
+      <div class="cr-chips" id="crChips"></div>
+      <button class="cr-btn" id="crAutoBtn" onclick="toggleCarouselAuto()" title="Hörprobe automatisch abspielen">Auto</button>
+      <button class="cr-btn" onclick="setView('paper')" title="Zeitungsansicht">▤<span class="cr-hide-sm"> Zeitung</span></button>
+      <button class="cr-btn" onclick="setView('nano')" title="iPod-Menü">◉</button>
+    </div>
+    <div class="cr-day" id="crDay"></div>
+    <div class="cr-stage" id="crStage">
+      <div class="cr-empty hidden" id="crEmpty">Heute nichts Neues in diesem Ressort.</div>
+      <button class="cr-arrow left" onclick="carouselGo(-1)" aria-label="Zurück">‹</button>
+      <button class="cr-arrow right" onclick="carouselGo(1)" aria-label="Weiter">›</button>
+    </div>
+    <div class="cr-info">
+      <div class="cr-meta" id="crMeta"></div>
+      <h2 class="cr-headline" id="crHeadline"></h2>
+      <p class="cr-summary" id="crSummary"></p>
+      <div class="cr-actions">
+        <button class="cr-action primary" onclick="carouselOpen()">Lesen →</button>
+        <button class="cr-action" id="crPreviewBtn" onclick="togglePreview()">▶ Hörprobe</button>
+        <button class="cr-action" id="crSaveBtn" onclick="carouselToggleSave()">☆ Merken</button>
+      </div>
+    </div>
+    <div class="cr-foot"><span class="cr-hint">← → blättern · ↑ ↓ Ressort · ⏎ lesen · M merken · R Zufall</span><span id="crCount"></span></div>
+  </div>
+
   <!-- NANO-MODUS -->
   <div id="viewNano" class="nano-wrap">
     <div class="nano-device" id="nanoDevice">
@@ -453,6 +568,7 @@
       <div class="flex items-center justify-between gap-2 pb-3 double-rule-bottom mb-6">
         <div class="font-mono-meta text-xs uppercase tracking-widest text-[var(--accent-red)] font-bold truncate" id="modalCategory">RESSORT</div>
         <div class="flex items-center gap-1.5 shrink-0">
+          <button id="modalSave" onclick="toggleSaved(readerId)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] whitespace-nowrap" title="Für später merken">☆ Merken</button>
           <button id="modalPrev" onclick="stepReader(-1)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] disabled:opacity-30" title="Vorheriger Artikel (←)">←</button>
           <button id="modalNext" onclick="stepReader(1)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] disabled:opacity-30" title="Nächster Artikel (→)">→</button>
           <button onclick="closeReader()" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕ <span class="hidden sm:inline">Schließen</span></button>
@@ -466,6 +582,7 @@
         <p id="modalSummary" class="text-[15px] font-serif-body text-[var(--ink-primary)] leading-relaxed"></p>
         <p id="modalTakeaway" class="text-sm font-serif-body italic text-[var(--ink-secondary)] mt-2 pt-2 hairline-top"></p>
       </div>
+      <div id="modalRelated" class="hidden my-4 text-sm font-serif-body text-[var(--ink-secondary)]"></div>
       <div id="modalAudio" class="my-4"></div>
       <figure id="modalFigure" class="my-5"></figure>
       <div id="modalBody" class="article-body font-serif-body text-lg leading-relaxed text-[var(--ink-primary)]"></div>
@@ -524,7 +641,7 @@
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
     const shorten = (s, n) => (s && s.length > n) ? s.slice(0, n).replace(/\s+\S*$/, '') + ' …' : (s || '');
-    const sectionLabel = sec => sec ? `${ROMAN[sections.indexOf(sec)] || ''}. ${sec.name}` : '';
+    const sectionLabel = sec => !sec ? '' : sections.includes(sec) ? `${ROMAN[sections.indexOf(sec)]}. ${sec.name}` : sec.name;
     const pageOf = sec => sections.indexOf(sec) + 2;
     const accentOf = sec => sec && sec.color === 'gruen' ? 'var(--accent-green)' : 'var(--accent-red)';
     const byDate = (a, b) => (b.published || '').localeCompare(a.published || '');
@@ -673,7 +790,7 @@
       byId = Object.fromEntries(articles.map(a => [a.id, a]));
       currentSection = 'all';
       $('#keywordSearchInput').value = '';
-      $('#frontPageSpread').classList.remove('hidden');
+      ['#frontPageSpread', '#frontExtras'].forEach(el => $(el).classList.remove('hidden'));
 
       // Kopfzeile: Datum & Stand der Ausgabe
       const created = new Date(data.generated_at);
@@ -690,18 +807,22 @@
       } else {
         status.innerText = `Ausgabe ${created.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })} ✓`;
       }
-      $('#editionBadge').innerText = `Ausgabe Wien • ${data.ai ? 'KI Kuratiert' : 'ohne KI-Redaktion'}${data.private ? ' • Privat' : ''}`;
+      const weekendEdition = data.date && [0, 6].includes(new Date(data.date + 'T12:00:00').getDay());
+      $('#editionBadge').innerText = `${weekendEdition ? 'Wochenendausgabe' : 'Ausgabe Wien'} • ${data.ai ? 'KI Kuratiert' : 'ohne KI-Redaktion'}${data.private ? ' • Privat' : ''}`;
       $('#editionCount').innerText = `${articles.length} MELDUNGEN`;
 
       applyPaperName(store.get('paperName', $('#paperNameSelect').options[0].value));
       renderNav();
       renderFrontPage();
+      renderExtras();
       renderArticles();
       renderChapterPills();
       renderSources();
       renderArchiveSelect();
+      updateSavedUI();
       updateAudioUI();
       if (document.documentElement.dataset.view === 'nano') nanoStart();
+      if (document.documentElement.dataset.view === 'carousel') carouselStart();
       if (!firstLoad) window.scrollTo({ top: 0 });
 
       const match = location.hash.match(/^#a=([\w-]+)/);
@@ -710,7 +831,8 @@
 
     // ───────── Navigation (Ressorts) ─────────
     function renderNav() {
-      const items = [{ id: 'all', name: 'Titelseite', short: 'Seite 1', icon: '📰' }, ...sections];
+      const items = [{ id: 'all', name: 'Titelseite', short: 'Seite 1', icon: '📰' }, ...sections,
+        ...(edition.puzzles ? [{ id: 'raetsel', name: 'Rätsel', short: 'Rätsel', icon: '🧩' }] : [])];
       $('#sectionNav').innerHTML = `<div class="flex items-center gap-1 sm:gap-5 shrink-0">` + items.map((s, i) => `
         ${i ? '<span class="text-[var(--rule-light)]">/</span>' : ''}
         <button onclick="setSection('${s.id}')" data-sec="${s.id}" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">${esc(s.id === 'all' ? s.name : s.short)}</button>`).join('') + `</div>`;
@@ -731,7 +853,7 @@
     function setSection(sec) {
       currentSection = sec;
       $('#keywordSearchInput').value = '';
-      $('#frontPageSpread').classList.toggle('hidden', sec !== 'all');
+      ['#frontPageSpread', '#frontExtras'].forEach(el => $(el).classList.toggle('hidden', sec !== 'all'));
       renderArticles();
       markActiveSection();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -741,7 +863,7 @@
     // Helper für Sidebar-Artikel
     function renderSmallArticle(art, isTelegram = false) {
       const sec = sectionById[art.section];
-      const color = isTelegram || sec.color ? accentOf(sec) : 'var(--ink-muted)';
+      const color = isTelegram || sec.color === 'gruen' ? accentOf(sec) : 'var(--ink-muted)';
       return `
         <div class="pb-3 hairline-bottom cursor-pointer group" onclick="openReader('${art.id}')">
           <div class="font-mono-meta text-[10px] uppercase tracking-wider font-semibold" style="color:${color}">${esc(sectionLabel(sec))}</div>
@@ -779,20 +901,380 @@
       $('#telegramBox').classList.toggle('hidden', !telegramSections.length);
       $('#telegramTitle').innerText = edition.telegram?.titel || 'Telegramm';
       $('#telegramSubtitle').innerText = edition.telegram?.unterzeile || telegramSections.map(s => s.short).join(' & ');
-      $('#rightSidebarContent').innerHTML = telegramSections
+      $('#rightSidebarContent').innerHTML = renderFootballMini() + (telegramSections
         .flatMap(s => articles.filter(a => a.section === s.id).slice(0, 2))
-        .map(a => renderSmallArticle(a, true)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Meldungen.</div>';
+        .map(a => renderSmallArticle(a, true)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Meldungen.</div>');
     }
 
     function openLead() {
       if (edition?.lead?.article) openReader(edition.lead.article);
     }
 
+    // ───────── Wetter, Börse, Der Tag ─────────
+    function fmtNumber(n, digits) {
+      if (n == null) return '';
+      const d = digits ?? 2;
+      // Kurse wie in der Zeitung: 6.398,59 (de-AT würde Leerzeichen als Tausendertrenner setzen)
+      return Number(n).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+    const fmtQuote = q => fmtNumber(q.value, q.name === 'EUR/USD' ? 4 : undefined) + (q.currency === 'EUR' && q.kind === 'aktie' ? ' €' : '');
+    const fmtChange = c => `${c > 0 ? '▲' : c < 0 ? '▼' : '■'} ${fmtNumber(Math.abs(c), 1)} %`;
+    const changeColor = c => c > 0 ? 'var(--accent-green)' : c < 0 ? 'var(--accent-red)' : 'var(--ink-muted)';
+
+    function renderWeather() {
+      const w = edition.weather;
+      $('#weatherBox').classList.toggle('hidden', !w);
+      $('#earText').classList.toggle('hidden', !!w);
+      if (!w) return;
+      $('#weatherBox').innerHTML = `
+        <div class="flex items-center gap-2.5 mt-1.5">
+          <span class="text-3xl leading-none">${esc(w.icon)}</span>
+          <div>
+            <div class="font-masthead text-xl font-bold leading-none">${esc(w.place)} ${esc(w.min)}–${esc(w.max)}°</div>
+            <div class="text-xs text-[var(--ink-secondary)] mt-0.5">${esc(w.text)} · ☂ ${esc(w.rain_chance)} % · Wind ${esc(w.wind)} km/h</div>
+          </div>
+        </div>
+        <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] mt-1.5 flex gap-3 flex-wrap">${(w.hours || []).map(h => `<span>${esc(h.hour)}h ${esc(h.icon)} ${esc(h.temp)}°</span>`).join('')}</div>
+        <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] mt-0.5">↑ ${esc(w.sunrise)} · ↓ ${esc(w.sunset)}${w.uv != null ? ` · UV ${fmtNumber(w.uv, 0)}` : ''}</div>`;
+    }
+
+    function renderMarkets() {
+      const top = (edition.markets || []).filter(q => q.kind !== 'aktie');
+      $('#marketStrip').classList.toggle('hidden', !top.length);
+      $('#marketStrip').innerHTML = '<span class="text-[var(--ink-muted)] uppercase tracking-widest mr-4">Kurszettel · Schluss Vortag</span>' +
+        top.map(q => `<span class="mr-5"><b>${esc(q.name)}</b> ${fmtQuote(q)} <span style="color:${changeColor(q.change)}">${fmtChange(q.change)}</span></span>`).join('');
+    }
+
+    function renderKurszettel() {
+      const stocks = (edition.markets || []).filter(q => q.kind === 'aktie').sort((a, b) => b.change - a.change);
+      if (!stocks.length) return '';
+      return `
+        <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)]/50 p-3.5 mb-8">
+          <div class="flex items-center justify-between gap-3 border-b border-[var(--rule-heavy)] pb-1.5 mb-2">
+            <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Kurszettel Wiener Börse</span>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] text-right">Schluss Vortag · nach Veränderung</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 font-mono-meta text-[12px]">${stocks.map(q => `
+            <div class="flex justify-between gap-3 py-1 hairline-bottom"><span class="truncate">${esc(q.name)}</span><span class="whitespace-nowrap">${fmtQuote(q)} <span style="color:${changeColor(q.change)}">${fmtChange(q.change)}</span></span></div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    function openFinance() {
+      const sec = sections.find(s => s.markets);
+      if (sec) setSection(sec.id);
+    }
+
+    function renderDay() {
+      const t = edition.today;
+      const show = t && (t.observances?.length || t.name_days?.length || t.fact);
+      $('#dayBox').classList.toggle('hidden', !show);
+      if (!show) return;
+      $('#dayDate').innerText = fmtShortDate(edition.date);
+      const label = text => `<div class="font-mono-meta text-[10px] uppercase tracking-wider text-[var(--accent-red)] font-semibold">${text}</div>`;
+      const parts = [];
+      if (t.observances?.length) {
+        parts.push(`<div>${label('Heute ist')}<div class="font-masthead font-bold text-base leading-snug mt-0.5">${esc(t.observances[0])}</div>` +
+          (t.observances.length > 1 ? `<div class="text-xs text-[var(--ink-secondary)] mt-1">außerdem: ${esc(t.observances.slice(1, 4).join(' · '))}</div>` : '') + '</div>');
+      }
+      if (t.fact) parts.push(`<div class="pt-3 hairline-top">${label('Fakt des Tages')}<p class="font-serif-body italic leading-snug mt-0.5">${esc(t.fact.text)}</p></div>`);
+      if (t.name_days?.length) parts.push(`<div class="pt-3 hairline-top font-mono-meta text-[11px] text-[var(--ink-secondary)]">Namenstag: ${esc(t.name_days.join(', '))}</div>`);
+      const pz = edition.puzzles;
+      if (pz) parts.push(`<button onclick="setSection('raetsel')" class="block w-full text-left pt-3 hairline-top group">${label('Rätselecke')}<span class="font-serif-body group-hover:underline">${pz.sudoku ? `Sudoku (${esc(pz.sudoku.level)})` : ''}${pz.sudoku && pz.quiz?.length ? ' · ' : ''}${pz.quiz?.length ? `${pz.quiz.length} Fragen zur Ausgabe` : ''} →</span></button>`);
+      $('#dayContent').innerHTML = parts.join('');
+    }
+
+    function renderExtras() {
+      renderWeather();
+      renderMarkets();
+      renderDay();
+      renderWeekend();
+    }
+
+    // ───────── Fußball: Spielplan & Tabelle ─────────
+    function fmtKickoff(iso) {
+      const d = new Date(iso);
+      const zone = { timeZone: 'Europe/Vienna' };   // Anstoß immer in Wiener Zeit, auch im Urlaub
+      return `${d.toLocaleDateString('de-AT', { ...zone, weekday: 'short', day: 'numeric', month: 'numeric' })}, ${d.toLocaleTimeString('de-AT', { ...zone, hour: '2-digit', minute: '2-digit' })}`;
+    }
+    const teamRow = () => (edition.football?.tables || []).flatMap(t => t.rows).find(r => r.is_team);
+    const resultColor = r => r === 'S' ? 'var(--accent-green)' : r === 'N' ? 'var(--accent-red)' : 'var(--ink-muted)';
+
+    function renderFootballMini() {
+      const fb = edition.football;
+      if (!fb) return '';
+      const next = fb.fixtures?.[0], last = fb.results?.[0], row = teamRow();
+      return `
+        <div class="pb-3 hairline-bottom cursor-pointer group" onclick="setSection('${esc(fb.section)}')">
+          <div class="font-mono-meta text-[10px] uppercase tracking-wider font-semibold" style="color:var(--accent-green)">${esc(fb.team)}${row ? ` · Platz ${esc(row.rank)} · ${esc(row.points)} Pkt.` : ''}</div>
+          ${next ? `<div class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${esc(next.home)} – ${esc(next.away)}</div>
+            <div class="text-sm text-[var(--ink-secondary)]">${esc(fmtKickoff(next.date))} · ${esc(next.competition)}</div>` : ''}
+          ${last ? `<div class="font-mono-meta text-[11px] mt-1">Zuletzt: ${esc(last.home)} – ${esc(last.away)} <b style="color:${resultColor(last.result)}">${esc(last.score)}</b></div>` : ''}
+        </div>`;
+    }
+
+    function renderFootball() {
+      const fb = edition.football;
+      if (!fb) return '';
+      const heading = text => `<div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mt-3 mb-1">${text}</div>`;
+      const match = m => `
+        <div class="flex justify-between gap-3 py-1 hairline-bottom">
+          <span class="truncate">${esc(fmtKickoff(m.date))} · ${esc(m.home)} – ${esc(m.away)}</span>
+          <span class="whitespace-nowrap">${m.score ? `<b style="color:${resultColor(m.result)}">${esc(m.score)}</b>` : `<span class="text-[var(--ink-muted)]">${esc(m.competition)}</span>`}</span>
+        </div>`;
+      const tables = (fb.tables || []).map(t => `
+        ${heading(esc(t.name))}
+        <table class="w-full font-mono-meta text-[12px]">
+          <thead><tr class="text-[var(--ink-muted)] text-left"><th class="font-normal w-6">#</th><th class="font-normal">Verein</th><th class="font-normal text-right">Sp</th><th class="font-normal text-right hidden sm:table-cell">S-U-N</th><th class="font-normal text-right">Diff</th><th class="font-normal text-right">Pkt</th></tr></thead>
+          <tbody>${t.rows.map(r => `
+            <tr class="${r.is_team ? 'font-bold' : ''}" style="${r.is_team ? 'color:var(--accent-green)' : ''}">
+              <td>${esc(r.rank)}</td><td>${esc(r.team)}</td><td class="text-right">${esc(r.played ?? '')}</td>
+              <td class="text-right hidden sm:table-cell">${esc([r.won, r.drawn, r.lost].filter(v => v != null).join('-'))}</td>
+              <td class="text-right">${esc(r.diff ?? '')}</td><td class="text-right">${esc(r.points)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`).join('');
+      return `
+        <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)]/50 p-3.5 mb-8">
+          <div class="flex items-center justify-between gap-3 border-b border-[var(--rule-heavy)] pb-1.5 mb-1">
+            <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">${esc(fb.team)} · Spielplan & Tabelle</span>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">Daten: ESPN</span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 font-mono-meta text-[12px]">
+            <div>${heading('Nächste Spiele')}${(fb.fixtures || []).slice(0, 4).map(match).join('') || '<div class="text-[var(--ink-muted)]">Keine Termine.</div>'}
+                 ${heading('Letzte Ergebnisse')}${(fb.results || []).slice(0, 4).map(match).join('')}</div>
+            <div>${tables}</div>
+          </div>
+        </div>`;
+    }
+
+    // ───────── Wochenende: Die Woche & lange Lesestücke ─────────
+    function renderWeekend() {
+      const week = edition.week;
+      $('#weekBlock').classList.toggle('hidden', !week);
+      if (week) {
+        const range = [week.from, week.to].filter(Boolean).map(fmtShortDate).join(' – ');
+        const story = week.story;
+        $('#weekBlock').innerHTML = `
+          <div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-4">
+            <h3 class="font-masthead text-3xl font-black">Die Woche</h3>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">${esc(range)}</span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-7">
+              ${week.intro ? `<p class="font-serif-body italic text-lg text-[var(--ink-secondary)] leading-snug mb-4">${esc(week.intro)}</p>` : ''}
+              ${story ? `<div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)]">Geschichte der Woche</div>
+                <h4 class="font-masthead text-2xl font-bold leading-tight mt-1 mb-2">${esc(story.headline)}</h4>
+                <div class="newspaper-columns-2 text-[15px] leading-relaxed">${(story.text || '').split(/\n\s*\n/).filter(Boolean).map(p => `<p class="mb-3">${esc(p)}</p>`).join('')}</div>` : ''}
+              ${(week.sections || []).length ? `<div class="grid sm:grid-cols-2 gap-4 mt-4">${week.sections.map(x => `
+                <div><div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold" style="color:${accentOf(sectionById[x.section])}">${esc(sectionById[x.section]?.name || '')}</div>
+                <ul class="list-disc pl-4 text-sm mt-1 space-y-1">${x.points.map(pt => `<li>${esc(pt)}</li>`).join('')}</ul></div>`).join('')}</div>` : ''}
+            </div>
+            <div class="lg:col-span-5 lg:border-l lg:border-[var(--rule-light)] lg:pl-6">
+              <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mb-2">Die Aufmacher der Woche</div>
+              ${(week.days || []).map(d => `
+                <button onclick="openArchiveDay('${esc(d.date)}')" class="block w-full text-left py-2 hairline-bottom group">
+                  <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">${esc(fmtShortDate(d.date))}</span>
+                  <span class="block font-masthead font-bold leading-snug group-hover:underline">${esc(d.headline)}</span>
+                </button>`).join('')}
+            </div>
+          </div>`;
+      }
+      const longreads = (edition.weekend?.longreads || []).map(id => byId[id]).filter(Boolean);
+      $('#longreadsBlock').classList.toggle('hidden', !longreads.length);
+      if (longreads.length) {
+        $('#longreadsBlock').innerHTML = `
+          <div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-5">
+            <h3 class="font-masthead text-2xl font-bold whitespace-nowrap">Fürs Wochenende</h3>
+            <span class="font-mono-meta text-[10px] uppercase text-right text-[var(--ink-muted)]">Die langen Stücke der Woche</span>
+          </div>
+          ${renderGrid(longreads, { showSection: true })}`;
+      }
+    }
+
+    function openArchiveDay(date) {
+      if (date === latestDate) return showEdition(CURRENT);
+      const entry = archiveList.find(e => e.date === date);
+      if (entry) showEdition(entry.file);
+    }
+
+    // ───────── Rätselecke: Sudoku & Quiz ─────────
+    function renderPuzzles() {
+      const pz = edition.puzzles || {};
+      const head = (title, extra) => `<div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-4"><h3 class="font-masthead text-2xl font-bold">${title}</h3><span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">${extra}</span></div>`;
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          ${pz.sudoku ? `<div>${head('Sudoku des Tages', `${esc(pz.sudoku.level)} · <span id="sudokuTimer">0:00</span>`)}<div id="sudokuBoard"></div></div>` : ''}
+          ${pz.quiz?.length ? `<div>${head('Hast du die Zeitung gelesen?', '<span id="quizScore"></span>')}<div id="quizBox"></div></div>` : ''}
+        </div>`;
+    }
+
+    const sudoku = { cells: [], given: [], solution: [], sel: -1, key: '', started: 0, elapsed: 0, solved: false, timer: null };
+    const fmtDuration = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+
+    function setupSudoku() {
+      const sd = edition.puzzles?.sudoku;
+      if (!sd || !$('#sudokuBoard')) return;
+      sudoku.key = `sudoku-${edition.date}`;
+      sudoku.given = [...sd.puzzle].map(Number);
+      sudoku.solution = [...sd.solution].map(Number);
+      let state = null;
+      try { state = JSON.parse(localStorage.getItem(sudoku.key)); } catch (e) {}
+      sudoku.cells = state?.cells?.length === 81 ? state.cells : [...sudoku.given];
+      sudoku.started = state?.started || Date.now();
+      sudoku.elapsed = state?.elapsed || 0;
+      sudoku.solved = !!state?.solved;
+      sudoku.sel = -1;
+      renderSudoku();
+      clearInterval(sudoku.timer);
+      sudoku.timer = setInterval(updateSudokuTimer, 1000);
+      updateSudokuTimer();
+    }
+
+    function saveSudoku() {
+      try { localStorage.setItem(sudoku.key, JSON.stringify({ cells: sudoku.cells, started: sudoku.started, elapsed: sudoku.elapsed, solved: sudoku.solved })); } catch (e) {}
+    }
+
+    function renderSudoku(wrong = []) {
+      const board = $('#sudokuBoard');
+      if (!board) return;
+      const btn = 'px-3 py-1.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)]';
+      board.innerHTML = `
+        <div class="sudoku-grid">${sudoku.cells.map((v, i) => `<button class="sd-cell${sudoku.given[i] ? ' given' : ''}${wrong.includes(i) ? ' wrong' : ''}" data-i="${i}" onclick="selectSudoku(${i})">${v || ''}</button>`).join('')}</div>
+        <div class="sudoku-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button onclick="enterSudoku(${n})">${n}</button>`).join('')}<button onclick="enterSudoku(0)" title="Löschen">⌫</button></div>
+        <div class="flex flex-wrap gap-2 mt-3 font-mono-meta text-[11px] uppercase">
+          <button onclick="checkSudoku()" class="${btn}">Prüfen</button>
+          <button onclick="revealSudoku()" class="${btn}">Lösung zeigen</button>
+          <button onclick="resetSudoku()" class="${btn}">Von vorn</button>
+        </div>
+        <div id="sudokuMsg" class="font-mono-meta text-[11px] mt-2 min-h-[1.2em]">${sudoku.solved ? `Gelöst in ${fmtDuration(sudoku.elapsed)} 🎉` : ''}</div>`;
+      highlightSudoku();
+    }
+
+    function highlightSudoku() {
+      const sel = sudoku.sel;
+      const value = sel >= 0 ? sudoku.cells[sel] : 0;
+      document.querySelectorAll('.sd-cell').forEach(el => {
+        const i = +el.dataset.i;
+        const peer = sel >= 0 && (Math.floor(i / 9) === Math.floor(sel / 9) || i % 9 === sel % 9 ||
+          (Math.floor(i / 27) === Math.floor(sel / 27) && Math.floor((i % 9) / 3) === Math.floor((sel % 9) / 3)));
+        el.classList.toggle('sel', i === sel);
+        el.classList.toggle('peer', peer && i !== sel);
+        el.classList.toggle('same', !!value && sudoku.cells[i] === value && i !== sel);
+      });
+    }
+
+    function selectSudoku(i) {
+      sudoku.sel = i;
+      highlightSudoku();
+    }
+
+    function enterSudoku(n) {
+      const i = sudoku.sel;
+      if (i < 0 || sudoku.given[i] || sudoku.solved) return;
+      sudoku.cells[i] = n;
+      if (sudoku.cells.every((v, k) => v === sudoku.solution[k])) {
+        sudoku.solved = true;
+        sudoku.elapsed = Date.now() - sudoku.started;
+      }
+      saveSudoku();
+      renderSudoku();
+    }
+
+    function checkSudoku() {
+      const wrong = sudoku.cells.map((v, i) => (v && v !== sudoku.solution[i] ? i : -1)).filter(i => i >= 0);
+      renderSudoku(wrong);
+      $('#sudokuMsg').textContent = wrong.length ? `${wrong.length} ${wrong.length === 1 ? 'Feld stimmt' : 'Felder stimmen'} nicht.` : 'Bisher alles richtig.';
+    }
+
+    function revealSudoku() {
+      if (!confirm('Lösung wirklich zeigen?')) return;
+      sudoku.cells = [...sudoku.solution];
+      sudoku.solved = true;
+      sudoku.elapsed = Date.now() - sudoku.started;
+      saveSudoku();
+      renderSudoku();
+      $('#sudokuMsg').textContent = 'Lösung eingeblendet.';
+    }
+
+    function resetSudoku() {
+      sudoku.cells = [...sudoku.given];
+      sudoku.started = Date.now();
+      sudoku.solved = false;
+      sudoku.elapsed = 0;
+      saveSudoku();
+      renderSudoku();
+    }
+
+    function updateSudokuTimer() {
+      const el = $('#sudokuTimer');
+      if (el) el.textContent = fmtDuration(sudoku.solved ? sudoku.elapsed : Date.now() - sudoku.started);
+    }
+
+    // Tastatur: Ziffern eintragen, Pfeile wandern, ⌫ löscht
+    function sudokuKey(e) {
+      if (sudoku.sel < 0 || e.target.closest('input, select, textarea')) return false;
+      const moves = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 };
+      if (/^[1-9]$/.test(e.key)) enterSudoku(+e.key);
+      else if (['Backspace', 'Delete', '0'].includes(e.key)) enterSudoku(0);
+      else if (moves[e.key]) selectSudoku(Math.min(80, Math.max(0, sudoku.sel + moves[e.key])));
+      else return false;
+      e.preventDefault();
+      return true;
+    }
+
+    function quizState() {
+      try { return JSON.parse(localStorage.getItem(`quiz-${edition.date}`)) || {}; } catch (e) { return {}; }
+    }
+
+    function answerQuiz(qi, ai) {
+      const state = quizState();
+      if (state[qi] != null) return;
+      state[qi] = ai;
+      try { localStorage.setItem(`quiz-${edition.date}`, JSON.stringify(state)); } catch (e) {}
+      renderQuiz();
+    }
+
+    function quizVerdict(right, total) {
+      if (right === total) return 'Volle Punktzahl – Zeitungsleser:in des Tages! 🏆';
+      return right >= total / 2 ? 'Gut informiert.' : 'Morgen wieder – oder gleich die Artikel nachlesen.';
+    }
+
+    function renderQuiz() {
+      const box = $('#quizBox');
+      if (!box) return;
+      const quiz = edition.puzzles?.quiz || [];
+      const state = quizState();
+      box.innerHTML = quiz.map((q, qi) => {
+        const given = state[qi];
+        const answers = q.answers.map((answer, ai) => {
+          let style = 'border-[var(--rule-light)] hover:border-[var(--rule-heavy)]';
+          if (given != null) {
+            style = ai === q.correct ? 'border-[var(--accent-green)] text-[var(--accent-green)] font-bold'
+              : ai === given ? 'border-[var(--accent-red)] text-[var(--accent-red)] line-through' : 'border-[var(--rule-light)] opacity-60';
+          }
+          return `<button ${given != null ? 'disabled' : ''} onclick="answerQuiz(${qi}, ${ai})" class="text-left px-3 py-2 border ${style} font-serif-body">${esc(answer)}</button>`;
+        }).join('');
+        return `
+          <div class="py-3 hairline-bottom">
+            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Frage ${qi + 1} von ${quiz.length}</div>
+            <div class="font-masthead font-bold text-lg leading-snug mt-1 mb-2">${esc(q.question)}</div>
+            <div class="grid gap-1.5">${answers}</div>
+            ${given != null ? `<div class="text-sm mt-2">${given === q.correct ? '✓ Richtig!' : '✗ Leider nicht.'} ${esc(q.explanation || '')}
+              ${findArticle(q.article) ? `<button onclick="openReader('${esc(q.article)}')" class="underline font-mono-meta text-[11px] uppercase ml-1">Zum Artikel →</button>` : ''}</div>` : ''}
+          </div>`;
+      }).join('');
+      const done = Object.keys(state).length;
+      const right = quiz.filter((q, qi) => state[qi] === q.correct).length;
+      $('#quizScore').textContent = done ? `${right} von ${done} richtig` : `${quiz.length} Fragen`;
+      if (done === quiz.length && quiz.length) box.insertAdjacentHTML('beforeend', `<div class="font-masthead font-bold text-lg mt-4">${esc(quizVerdict(right, quiz.length))}</div>`);
+    }
+
     // ───────── Artikel-Raster ─────────
     function renderCard(art, opts = {}) {
-      const sec = sectionById[art.section];
+      const sec = secOf(art);
       const img = opts.big && safeUrl(art.image);
-      const meta = [art.source, timeAgo(art.published)].filter(Boolean).join(' · ');
+      const meta = [art.source + (art.related?.length ? ` +${art.related.length}` : ''), timeAgo(art.published)].filter(Boolean).join(' · ');
       return `
         <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] ${opts.ruleRight ? 'lg:border-r lg:border-[var(--rule-light)] lg:pr-5' : ''} ${opts.big ? 'md:col-span-2' : ''} group cursor-pointer" onclick="openReader('${art.id}')">
           <div>
@@ -802,7 +1284,7 @@
             <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${esc(art.summary)}</p>
           </div>
           <div class="mt-4 pt-2 hairline-top flex items-center justify-between gap-2 font-mono-meta text-[10px] text-[var(--ink-muted)]">
-            <span class="truncate">${esc(meta)}</span>
+            <span class="truncate"><span data-save-mark="${art.id}" class="${isSaved(art.id) ? '' : 'hidden'} text-[var(--accent-red)]">★ </span>${esc(meta)}</span>
             <span class="uppercase font-semibold whitespace-nowrap text-[var(--ink-primary)] group-hover:text-[var(--accent-red)]">${art.full_text ? `${art.reading_minutes} Min. →` : 'Lesen →'}</span>
           </div>
         </article>
@@ -841,29 +1323,95 @@
                 <h3 class="font-masthead text-2xl font-bold hover:text-[var(--accent-red)]">${esc(sectionLabel(sec))}</h3>
                 <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] whitespace-nowrap">S. ${pageOf(sec)} · ${list.length} Meldungen →</span>
               </div>
+              ${sec.markets ? renderKurszettel() : ''}
+              ${edition.football?.section === sec.id ? renderFootball() : ''}
               ${renderGrid(list.slice(0, 7), { feature: true })}
             </section>`;
         }).join('');
+        return;
+      }
+      if (currentSection === 'raetsel') {
+        $('#activeSectionKicker').innerText = 'RÄTSELECKE';
+        $('#activeSectionHeading').innerText = '🧩 Rätsel';
+        target.innerHTML = renderPuzzles();
+        setupSudoku();
+        renderQuiz();
+        return;
+      }
+      if (currentSection === 'saved') {
+        $('#activeSectionKicker').innerText = `${saved.length} GEMERKT · AUF DIESEM GERÄT GESPEICHERT`;
+        $('#activeSectionHeading').innerText = '★ Merkliste';
+        target.innerHTML = renderGrid(saved, { showSection: true });
         return;
       }
       const sec = sectionById[currentSection];
       const list = articles.filter(a => a.section === sec.id);
       $('#activeSectionKicker').innerText = `SEITE ${pageOf(sec)} · ${list.length} MELDUNGEN`;
       $('#activeSectionHeading').innerText = sectionLabel(sec);
-      target.innerHTML = list.length ? renderGrid(list, { feature: true }) : `<div class="py-12 text-center text-[var(--ink-muted)]">Heute nichts Neues in diesem Ressort.</div>`;
+      target.innerHTML = (sec.markets ? renderKurszettel() : '') + (edition.football?.section === sec.id ? renderFootball() : '') +
+        (list.length ? renderGrid(list, { feature: true }) : `<div class="py-12 text-center text-[var(--ink-muted)]">Heute nichts Neues in diesem Ressort.</div>`);
     }
 
     // Suche
     function filterArticlesByKeyword(query) {
-      if (query.trim() && currentSection === 'all') $('#frontPageSpread').classList.add('hidden');
-      if (!query.trim()) $('#frontPageSpread').classList.toggle('hidden', currentSection !== 'all');
+      ['#frontPageSpread', '#frontExtras'].forEach(el => $(el).classList.toggle('hidden', !!query.trim() || currentSection !== 'all'));
       renderArticles(query);
     }
     function resetFilters() { setSection('all'); }
 
+    // ───────── Merkliste (Später lesen) ─────────
+    // Gemerkte Artikel werden komplett auf dem Gerät gespeichert – so bleiben sie lesbar,
+    // auch wenn ihre Ausgabe längst aus dem Archiv gefallen ist.
+    const SAVED_KEY = 'merkliste';
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch (e) { saved = []; }
+    const isSaved = id => saved.some(a => a.id === id);
+    const findArticle = id => byId[id] || saved.find(a => a.id === id);
+
+    function secOf(art) {
+      return sectionById[art.section] || { id: art.section, name: art.sectionName || 'Gemerkt', short: art.sectionShort || 'Gemerkt', color: art.sectionColor || '', feeds: [] };
+    }
+
+    function persistSaved() {
+      try {
+        localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+      } catch (e) {
+        // Speicher voll: ohne Volltexte noch einmal versuchen, der Link zum Original bleibt
+        try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved.map(a => ({ ...a, content_html: '' })))); } catch (e2) {}
+      }
+    }
+
+    function toggleSaved(id) {
+      const art = findArticle(id);
+      if (!art) return;
+      if (isSaved(id)) {
+        saved = saved.filter(a => a.id !== id);
+      } else {
+        const sec = secOf(art);
+        saved.unshift({ ...art, sectionName: sec.name, sectionShort: sec.short, sectionColor: sec.color, savedAt: new Date().toISOString() });
+      }
+      persistSaved();
+      updateSavedUI();
+    }
+
+    function updateSavedUI() {
+      $('#savedBtn').classList.toggle('hidden', !saved.length);
+      $('#savedCount').textContent = saved.length;
+      if (readerId) $('#modalSave').textContent = isSaved(readerId) ? '★ Gemerkt' : '☆ Merken';
+      document.querySelectorAll('[data-save-mark]').forEach(el => el.classList.toggle('hidden', !isSaved(el.dataset.saveMark)));
+      if (currentSection === 'saved') saved.length ? renderArticles() : setSection('all');
+      carouselSavedChanged();
+    }
+
+    // Im Reader blättert ←/→ innerhalb des Ressorts – oder innerhalb der Merkliste, wenn man von dort kommt
+    function readerList(art) {
+      const fromSaved = currentSection === 'saved' || (document.documentElement.dataset.view === 'carousel' && carousel.filter === 'saved');
+      return fromSaved || !byId[art.id] ? saved : articles.filter(a => a.section === art.section);
+    }
+
     // ───────── Lesemodus ─────────
     function openReader(id, mode = 'push') {
-      const art = byId[id];
+      const art = findArticle(id);
       if (!art) return;
       renderReader(art);
       if (mode === 'push') { history.pushState({ reader: id }, '', '#a=' + id); readerPushed = true; }
@@ -872,8 +1420,9 @@
 
     function renderReader(art) {
       readerId = art.id;
-      const sec = sectionById[art.section];
+      const sec = secOf(art);
       $('#modalCategory').textContent = sectionLabel(sec);
+      $('#modalSave').textContent = isSaved(art.id) ? '★ Gemerkt' : '☆ Merken';
       $('#modalMeta').textContent = [art.source, fmtDateTime(art.published), art.author, `${art.reading_minutes} Min. Lesezeit`].filter(Boolean).join(' · ');
       $('#modalTitle').textContent = art.headline;
       const differs = art.title && art.title !== art.headline;
@@ -884,6 +1433,10 @@
       $('#modalSummary').textContent = art.summary;
       $('#modalTakeaway').textContent = art.takeaway;
 
+      const related = art.related || [];
+      $('#modalRelated').classList.toggle('hidden', !related.length);
+      $('#modalRelated').innerHTML = related.length ? '<span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Auch berichtet:</span> ' +
+        related.map(r => safeUrl(r.link) ? `<a href="${esc(r.link)}" target="_blank" rel="noopener noreferrer" class="underline" title="${esc(r.title)}">${esc(r.source)} ↗</a>` : esc(r.source)).join(' · ') : '';
       const audio = safeUrl(art.audio);
       $('#modalAudio').innerHTML = audio ? `<audio controls preload="none" src="${esc(audio)}" class="w-full"></audio>` : '';
       const img = safeUrl(art.image);
@@ -900,8 +1453,8 @@
         : 'Öffentliche Ausgabe: hier steht nur ein Anriss. Den ganzen Text gibt\'s beim Original – oder in der privaten Ausgabe mit Passwort.';
       $('#modalExternalLink').href = safeUrl(art.link) || '#';
 
-      const list = articles.filter(a => a.section === art.section);
-      const idx = list.indexOf(art);
+      const list = readerList(art);
+      const idx = list.findIndex(a => a.id === art.id);
       $('#modalPrev').disabled = idx <= 0;
       $('#modalNext').disabled = idx >= list.length - 1;
 
@@ -911,10 +1464,10 @@
     }
 
     function stepReader(dir) {
-      const art = byId[readerId];
+      const art = findArticle(readerId);
       if (!art) return;
-      const list = articles.filter(a => a.section === art.section);
-      const next = list[list.indexOf(art) + dir];
+      const list = readerList(art);
+      const next = list[list.findIndex(a => a.id === art.id) + dir];
       if (next) openReader(next.id, 'replace');
     }
 
@@ -935,7 +1488,7 @@
     window.addEventListener('popstate', e => {
       const state = e.state || {};
       if (document.documentElement.dataset.view === 'nano') { nanoPopTo(state.nano || 1); return; }
-      if (state.reader && byId[state.reader]) { renderReader(byId[state.reader]); readerPushed = true; }
+      if (state.reader && findArticle(state.reader)) { renderReader(findArticle(state.reader)); readerPushed = true; }
       else { readerPushed = false; hideReader(); }
     });
 
@@ -1030,10 +1583,18 @@
         <button onclick="playSpecificChapter(${i})" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent">${String(i + 1).padStart(2, '0')} ${esc(c.title)}</button>`).join('');
     }
 
+    function germanVoices() {
+      const score = v => (/de-AT/i.test(v.lang) ? 4 : 0) + (/premium|enhanced|natural|neural/i.test(v.name) ? 2 : 0) + (v.localService ? 1 : 0);
+      return speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de')).sort((a, b) => score(b) - score(a));
+    }
     function germanVoice() {
-      const voices = speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de'));
-      return voices.find(v => /de-AT/i.test(v.lang)) || voices.find(v => /premium|enhanced|natural|neural/i.test(v.name))
-        || voices.find(v => v.localService) || voices[0] || null;
+      return germanVoices()[0] || null;
+    }
+    // Zwei Sprecher im Browser: zweite deutsche Stimme – oder, wenn es nur eine gibt, etwas tiefer
+    function voiceFor(speaker) {
+      const voices = germanVoices();
+      const index = Math.max(0, (edition?.speakers || []).indexOf(speaker));
+      return { voice: voices[index % Math.max(1, voices.length)] || null, pitch: index && voices.length < 2 ? 0.8 : 1 };
     }
 
     // Lange Texte in Sätze-Häppchen teilen: Chrome bricht lange Utterances sonst nach ~15 s ab
@@ -1057,7 +1618,9 @@
       if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
       speechSynthesis.cancel();
       tts.idx = index;
-      tts.chunks = splitForSpeech(chapters()[index].text);
+      const ch = chapters()[index];
+      tts.chunks = (ch.lines?.length ? ch.lines : [{ speaker: null, text: ch.text }])
+        .flatMap(line => splitForSpeech(line.text).map(text => ({ text, speaker: line.speaker })));
       tts.chunk = 0;
       tts.playing = true;
       speakChunk();
@@ -1065,11 +1628,13 @@
 
     function speakChunk() {
       const token = ++tts.token;
-      const utterance = new SpeechSynthesisUtterance(tts.chunks[tts.chunk]);
-      const voice = germanVoice();
+      const chunk = tts.chunks[tts.chunk];
+      const utterance = new SpeechSynthesisUtterance(chunk.text);
+      const { voice, pitch } = voiceFor(chunk.speaker);
       if (voice) utterance.voice = voice;
       utterance.lang = voice?.lang || 'de-DE';
       utterance.rate = tts.rate;
+      utterance.pitch = pitch;
       utterance.onend = () => {
         if (token !== tts.token || !tts.playing) return;
         if (++tts.chunk < tts.chunks.length) speakChunk();
@@ -1190,11 +1755,263 @@
     }
 
     window.addEventListener('keydown', (e) => {
-      if (document.documentElement.dataset.view === 'nano') return nanoKey(e);
+      const view = document.documentElement.dataset.view;
+      if (view === 'nano') return nanoKey(e);
+      if (view === 'carousel' && !readerId && !lockWaiter && $('#sourcesModal').classList.contains('hidden')) return carouselKey(e);
+      if (currentSection === 'raetsel' && !readerId && sudokuKey(e)) return;
       if (e.key === 'Escape') { closeReader(); toggleSourcesModal(false); }
       if (readerId && e.key === 'ArrowLeft') stepReader(-1);
       if (readerId && e.key === 'ArrowRight') stepReader(1);
     });
+
+    // ───────── KARUSSELL (wie die Song-Auswahl bei SingStar) ─────────
+    // Endlosschleife: Jedes Cover hat eine absolute Position, der Artikel ergibt sich modulo Listenlänge.
+    // So bleiben die Elemente beim Blättern erhalten und gleiten per CSS-Transition weiter.
+    const SECTION_COLORS = { rot: '#b3261e', gruen: '#1b7a4e', blau: '#2457c5', violett: '#6d3fd1', tuerkis: '#0f8a7e', gold: '#b7791f', orange: '#d9601a', petrol: '#1f6f8b', pink: '#c2185b', grau: '#5b5b66' };
+    const COLOR_CYCLE = ['violett', 'blau', 'tuerkis', 'gold', 'gruen', 'rot', 'orange'];
+    const carousel = { filter: 'all', list: [], pos: 0, cards: new Map(), dragged: false, previewing: false, autoTimer: null };
+    const mod = (n, m) => ((n % m) + m) % m;
+    const colorOf = sec => SECTION_COLORS[sec?.color] || SECTION_COLORS[COLOR_CYCLE[Math.max(0, sections.indexOf(sec)) % COLOR_CYCLE.length]];
+
+    function carouselStart() {
+      if (!edition) return;
+      $('#crBrand').textContent = paperTitle();
+      renderCarouselChips();
+      $('#crAutoBtn').classList.toggle('is-on', store.get('crAuto', '0') === '1');
+      renderDayLine();
+      const valid = carousel.filter === 'all' || sectionById[carousel.filter] || (carousel.filter === 'saved' && saved.length);
+      carouselFilter(valid ? carousel.filter : 'all');
+    }
+
+    function renderCarouselChips() {
+      const chips = [{ id: 'all', short: 'Alle' }, ...sections, ...(saved.length ? [{ id: 'saved', short: '★ Merkliste' }] : [])];
+      $('#crChips').innerHTML = chips.map(s =>
+        `<button class="cr-chip" data-filter="${s.id}" onclick="carouselFilter('${s.id}')">${esc(s.short)}</button>`).join('') +
+        '<button class="cr-chip" onclick="carouselShuffle()">🎲 Zufall</button>';
+    }
+
+    function carouselToggleSave() {
+      const art = carousel.list[mod(carousel.pos, carousel.list.length)];
+      if (art) toggleSaved(art.id);
+    }
+
+    function carouselSavedChanged() {
+      if (document.documentElement.dataset.view !== 'carousel' || !edition) return;
+      const current = carousel.list[mod(carousel.pos, carousel.list.length)];
+      renderCarouselChips();
+      if (carousel.filter === 'saved') return carouselFilter(saved.length ? 'saved' : 'all');
+      document.querySelectorAll('.cr-chip[data-filter]').forEach(chip => chip.classList.toggle('is-on', chip.dataset.filter === carousel.filter));
+      if (current) $('#crSaveBtn').textContent = isSaved(current.id) ? '★ Gemerkt' : '☆ Merken';
+    }
+
+    function carouselFilter(id) {
+      carousel.filter = id;
+      carousel.list = id === 'all' ? articles : id === 'saved' ? [...saved] : articles.filter(a => a.section === id);
+      const lead = carousel.list.findIndex(a => a.id === edition.lead?.article);
+      carousel.pos = id === 'all' && lead >= 0 ? lead : 0;
+      carousel.cards.forEach(el => el.remove());
+      carousel.cards.clear();
+      document.querySelectorAll('.cr-chip[data-filter]').forEach(chip => chip.classList.toggle('is-on', chip.dataset.filter === id));
+      document.querySelector(`.cr-chip[data-filter="${id}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest' });
+      carouselRender(true);
+    }
+
+    function coverTransform(off) {
+      if (off === 0) return 'translate(-50%, -56%) translateZ(60px)';
+      const side = Math.sign(off), dist = Math.abs(off);
+      return `translate(calc(-50% + ${side * (62 + (dist - 1) * 30)}%), -56%) translateZ(${-120 - dist * 50}px) rotateY(${-side * 48}deg)`;
+    }
+
+    function buildCover(art, position) {
+      const sec = secOf(art);
+      const img = safeUrl(art.image);
+      const el = document.createElement('div');
+      el.className = `cr-card${img ? '' : ' no-img'}`;
+      el.style.setProperty('--c', colorOf(sec));
+      el.innerHTML = `${img ? `<img class="cr-img" src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
+        <div class="cr-cover"><span class="cr-kicker">${esc(sec.short)}${art.audio ? ' · 🎧' : ''}</span><span class="cr-title">${esc(art.headline)}</span><span class="cr-src">${esc(art.source)}</span></div>`;
+      el.querySelector('img')?.addEventListener('error', e => { e.target.remove(); el.classList.add('no-img'); });
+      el.addEventListener('click', () => {
+        if (carousel.dragged) return;
+        const off = position - carousel.pos;
+        off === 0 ? openReader(art.id) : carouselGo(off);
+      });
+      return el;
+    }
+
+    function carouselRender(instant = false) {
+      const { list, cards } = carousel;
+      const count = list.length;
+      $('#crEmpty').classList.toggle('hidden', count > 0);
+      if (!count) return carouselInfo(null);
+      // Nie denselben Artikel doppelt zeigen, wenn ein Ressort nur wenige Meldungen hat
+      const reach = Math.min(4, Math.floor((count - 1) / 2));
+      const wanted = new Set();
+      for (let off = -reach; off <= reach; off++) {
+        const position = carousel.pos + off;
+        wanted.add(position);
+        let el = cards.get(position);
+        if (!el) {
+          el = buildCover(list[mod(position, count)], position);
+          el.style.transition = 'none';
+          el.style.opacity = '0';
+          el.style.transform = coverTransform(off + Math.sign(off || 1));
+          $('#crStage').appendChild(el);
+          cards.set(position, el);
+          el.getBoundingClientRect();   // Startzustand festhalten, damit das Cover hereingleitet
+          if (!instant) el.style.transition = '';
+        }
+        el.style.transform = coverTransform(off);
+        el.style.opacity = Math.abs(off) > 3 ? '0' : '1';
+        el.style.zIndex = String(100 - Math.abs(off));
+        el.classList.toggle('is-center', off === 0);
+      }
+      for (const [position, el] of cards) {
+        if (wanted.has(position)) continue;
+        cards.delete(position);
+        el.style.opacity = '0';
+        el.style.transform = coverTransform(Math.sign(position - carousel.pos) * (reach + 1));
+        setTimeout(() => el.remove(), 460);
+      }
+      if (instant) requestAnimationFrame(() => cards.forEach(el => { el.style.transition = ''; }));
+      carouselInfo(list[mod(carousel.pos, count)]);
+    }
+
+    function carouselInfo(art) {
+      stopPreview();
+      clearTimeout(carousel.autoTimer);
+      if (!art) {
+        ['#crMeta', '#crHeadline', '#crSummary', '#crCount'].forEach(sel => { $(sel).textContent = ''; });
+        return;
+      }
+      const sec = secOf(art);
+      const img = safeUrl(art.image);
+      $('#crSaveBtn').textContent = isSaved(art.id) ? '★ Gemerkt' : '☆ Merken';
+      $('#viewCarousel').style.setProperty('--cr', colorOf(sec));
+      $('#crBackdrop').style.backgroundImage = img ? `url("${img.replace(/"/g, '%22')}")` : 'none';
+      $('#crMeta').textContent = [sectionLabel(sec), art.source, timeAgo(art.published), art.full_text ? `${art.reading_minutes} Min.` : ''].filter(Boolean).join(' · ');
+      $('#crHeadline').textContent = art.headline;
+      $('#crSummary').textContent = art.summary;
+      $('#crCount').textContent = `${mod(carousel.pos, carousel.list.length) + 1} / ${carousel.list.length}`;
+      if (store.get('crAuto', '0') === '1') carousel.autoTimer = setTimeout(playPreview, 900);
+    }
+
+    function carouselGo(steps) {
+      if (!carousel.list.length || !steps) return;
+      // weite Sprünge in Einzelschritten, damit die Cover sichtbar durchrollen
+      const dir = Math.sign(steps);
+      let left = Math.abs(steps);
+      const step = () => {
+        carousel.pos += dir;
+        carouselRender();
+        nanoTick();
+        if (--left > 0) setTimeout(step, left > 6 ? 60 : 110);
+      };
+      step();
+    }
+
+    // Zufall: rollt wie ein Spielautomat und bleibt irgendwo stehen
+    function carouselShuffle() {
+      const count = carousel.list.length;
+      if (count < 2) return;
+      let steps = 6 + Math.floor(Math.random() * Math.min(count, 18));
+      if (steps % count === 0) steps++;
+      carouselGo(steps);
+    }
+
+    function carouselOpen() {
+      const art = carousel.list[mod(carousel.pos, carousel.list.length)];
+      if (art) openReader(art.id);
+    }
+
+    function carouselCycleFilter(dir) {
+      const ids = ['all', ...sections.map(s => s.id), ...(saved.length ? ['saved'] : [])];
+      carouselFilter(ids[mod(ids.indexOf(carousel.filter) + dir, ids.length)]);
+    }
+
+    // Hörprobe: liest Schlagzeile und Zusammenfassung vor – wie die Song-Vorschau bei SingStar
+    function playPreview() {
+      const art = carousel.list[mod(carousel.pos, carousel.list.length)];
+      if (!art || !('speechSynthesis' in window)) return;
+      if (audioPlaying()) toggleAudioBriefing();
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(`${art.headline}. ${art.summary}`);
+      const voice = germanVoice();
+      if (voice) utterance.voice = voice;
+      utterance.lang = voice?.lang || 'de-DE';
+      utterance.rate = tts.rate;
+      utterance.onend = utterance.onerror = () => { carousel.previewing = false; $('#crPreviewBtn').textContent = '▶ Hörprobe'; };
+      carousel.previewing = true;
+      $('#crPreviewBtn').textContent = '■ Stopp';
+      speechSynthesis.speak(utterance);
+    }
+    function stopPreview() {
+      if (carousel.previewing) speechSynthesis.cancel();
+      carousel.previewing = false;
+      $('#crPreviewBtn').textContent = '▶ Hörprobe';
+    }
+    function togglePreview() {
+      carousel.previewing ? stopPreview() : playPreview();
+    }
+    function toggleCarouselAuto() {
+      const on = store.get('crAuto', '0') !== '1';
+      store.set('crAuto', on ? '1' : '0');
+      $('#crAutoBtn').classList.toggle('is-on', on);
+      if (on) playPreview(); else stopPreview();
+    }
+
+    function carouselKey(e) {
+      if (e.target.closest('input, select, textarea')) return;
+      const keys = {
+        ArrowRight: () => carouselGo(1), ArrowLeft: () => carouselGo(-1),
+        ArrowDown: () => carouselCycleFilter(1), ArrowUp: () => carouselCycleFilter(-1),
+        Enter: carouselOpen, ' ': togglePreview, r: carouselShuffle, R: carouselShuffle, m: carouselToggleSave, M: carouselToggleSave,
+      };
+      if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+    }
+
+    // Wischen und Mausrad: eine halbe Coverbreite = ein Schritt
+    (function setupCarouselGestures() {
+      const stage = $('#crStage');
+      let startX = null, lastX = 0;
+      stage.addEventListener('pointerdown', e => {
+        if (e.target.closest('.cr-arrow')) return;
+        startX = lastX = e.clientX;
+        carousel.dragged = false;
+      });
+      stage.addEventListener('pointermove', e => {
+        if (startX === null) return;
+        const width = stage.querySelector('.cr-card.is-center')?.offsetWidth || 240;
+        if (Math.abs(e.clientX - startX) > 8) carousel.dragged = true;
+        if (Math.abs(e.clientX - lastX) > width * 0.45) {
+          carouselGo(e.clientX < lastX ? 1 : -1);
+          lastX = e.clientX;
+        }
+      });
+      const end = () => { startX = null; setTimeout(() => { carousel.dragged = false; }, 0); };
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => stage.addEventListener(ev, end));
+      let wheelSum = 0, wheelLock = 0;
+      stage.addEventListener('wheel', e => {
+        e.preventDefault();
+        wheelSum += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (Date.now() < wheelLock || Math.abs(wheelSum) < 40) return;
+        carouselGo(Math.sign(wheelSum));
+        wheelSum = 0;
+        wheelLock = Date.now() + 160;
+      }, { passive: false });
+    })();
+
+    // Kurzinfo über der Bühne: Wetter, Tag, Börse (sofern in der Ausgabe)
+    function renderDayLine() {
+      const parts = [];
+      const w = edition?.weather;
+      if (w) parts.push(`${w.place} ${w.icon} ${w.min}–${w.max} °C${w.rain_chance != null ? ` · ☂ ${w.rain_chance} %` : ''}`);
+      const day = edition?.today?.observances?.[0];
+      if (day) parts.push(day);
+      const atx = edition?.markets?.find(m => m.name === 'ATX');
+      if (atx) parts.push(`ATX ${fmtNumber(atx.value)} ${atx.change >= 0 ? '▲' : '▼'}${fmtNumber(Math.abs(atx.change), 1)} %`);
+      $('#crDay').textContent = parts.join('   ·   ');
+    }
 
     // ───────── NANO-MODUS ─────────
     // Seiten-Stapel wie beim iPod: jede Ebene ist eine Liste oder ein Artikel.
@@ -1202,11 +2019,14 @@
     let nanoStack = [];
 
     function setView(view) {
-      if (view === 'nano' && readerId) { hideReader(); readerPushed = false; }
+      if (view !== 'paper' && readerId) { hideReader(); readerPushed = false; }
+      if (view !== 'carousel') stopPreview();
       document.documentElement.dataset.view = view;
       store.set('view', view);
-      if (view === 'nano') nanoStart();
-      else { history.replaceState(null, '', location.pathname + location.search); window.scrollTo(0, 0); }
+      if (view === 'nano') return nanoStart();
+      history.replaceState(null, '', location.pathname + location.search);
+      window.scrollTo(0, 0);
+      if (view === 'carousel') carouselStart();
     }
 
     function nanoStart() {
@@ -1229,8 +2049,16 @@
           { label: 'Alle Meldungen', go: () => nanoListPage('Alle Meldungen', [...articles].sort(byDate).map(a => a.id)) },
           { label: 'Hörausgabe', go: nanoBriefingPage },
           ...(articles.some(a => a.audio) ? [{ label: 'Podcast-Folgen', go: () => nanoListPage('Podcasts', articles.filter(a => a.audio).sort(byDate).map(a => a.id)) }] : []),
+          ...(saved.length ? [{ label: 'Merkliste', right: saved.length, go: () => nanoListPage('Merkliste', saved.map(a => a.id)) }] : []),
+          ...(edition.week ? [{ label: 'Die Woche', go: nanoWeekPage }] : []),
+          ...(edition.weekend?.longreads?.length ? [{ label: 'Fürs Wochenende', go: () => nanoListPage('Wochenende', edition.weekend.longreads.filter(id => byId[id])) }] : []),
+          ...(edition.weather || edition.today ? [{ label: 'Wetter & Tag', go: nanoTodayPage }] : []),
+          ...(edition.football ? [{ label: edition.football.team, go: nanoFootballPage }] : []),
+          ...(edition.puzzles?.quiz?.length ? [{ label: 'Quiz', go: nanoQuizPage }] : []),
+          ...(edition.markets?.length ? [{ label: 'Börse', go: nanoMarketsPage }] : []),
           ...(archiveList.length ? [{ label: 'Archiv', go: nanoArchivePage }] : []),
           { label: 'Einstellungen', go: nanoSettingsPage },
+          { label: 'Karussell', go: () => setView('carousel'), noChevron: true },
           { label: 'Zeitungsansicht', go: () => setView('paper'), noChevron: true },
         ],
       };
@@ -1251,14 +2079,99 @@
         title,
         empty: 'Heute nichts Neues.',
         build: () => ids.map(id => {
-          const a = byId[id];
+          const a = findArticle(id);
           return { label: a.headline, sub: [a.audio ? '🎧' : '', a.source, timeAgo(a.published)].filter(Boolean).join(' · '), twoLine: true, go: () => nanoArticlePage(id, ids) };
         }),
       };
     }
 
     function nanoArticlePage(id, ids) {
-      return { title: sectionById[byId[id].section].short, kind: 'article', id, ids };
+      return { title: secOf(findArticle(id)).short, kind: 'article', id, ids };
+    }
+
+    function nanoFootballPage() {
+      const info = (label, sub, right) => ({ label, sub, right, twoLine: !!sub, noChevron: true, go: () => {} });
+      return {
+        title: edition.football.team,
+        build: () => {
+          const fb = edition.football;
+          return [
+            ...(fb.fixtures || []).slice(0, 3).map(m => info(`${m.home} – ${m.away}`, `${fmtKickoff(m.date)} · ${m.competition}`)),
+            ...(fb.results || []).slice(0, 3).map(m => info(`${m.home} – ${m.away}`, '', m.score)),
+            ...(fb.tables || []).flatMap(t => t.rows).map(r => info(`${r.rank}. ${r.team}${r.is_team ? ' ●' : ''}`, '', `${r.points} Pkt.`)),
+          ];
+        },
+      };
+    }
+
+    function nanoQuizPage() {
+      return {
+        title: 'Quiz',
+        build: () => {
+          const state = quizState();
+          return (edition.puzzles?.quiz || []).map((q, qi) => ({
+            label: q.question, twoLine: true,
+            sub: state[qi] == null ? `Frage ${qi + 1}` : state[qi] === q.correct ? '✓ richtig' : '✗ falsch',
+            go: () => nanoQuestionPage(qi),
+          }));
+        },
+      };
+    }
+
+    function nanoQuestionPage(qi) {
+      return {
+        title: `Frage ${qi + 1}`,
+        build: () => {
+          const q = edition.puzzles.quiz[qi];
+          const given = quizState()[qi];
+          const mark = ai => given == null ? '' : ai === q.correct ? '✓' : ai === given ? '✗' : '';
+          return [
+            { label: q.question, twoLine: true, noChevron: true, go: () => {} },
+            ...q.answers.map((answer, ai) => ({ label: answer, right: mark(ai), noChevron: true, go: () => { answerQuiz(qi, ai); nanoRefresh(); } })),
+            ...(given != null ? [{ label: q.explanation || (given === q.correct ? 'Richtig!' : 'Leider nicht.'), sub: given === q.correct ? 'Richtig!' : 'Leider nicht', twoLine: true, noChevron: true, go: () => {} }] : []),
+          ];
+        },
+      };
+    }
+
+    function nanoWeekPage() {
+      const info = (label, sub) => ({ label, sub, twoLine: true, noChevron: true, go: () => {} });
+      return {
+        title: 'Die Woche',
+        build: () => {
+          const week = edition.week;
+          return [
+            ...(week.intro ? [info(week.intro, 'Die Woche')] : []),
+            ...(week.story ? [info(week.story.headline, 'Geschichte der Woche')] : []),
+            ...(week.sections || []).flatMap(x => x.points.map(pt => info(pt, sectionById[x.section]?.short || ''))),
+            ...(week.days || []).map(d => ({ label: d.headline, sub: fmtShortDate(d.date), twoLine: true, go: () => { openArchiveDay(d.date); } })),
+          ];
+        },
+      };
+    }
+
+    function nanoTodayPage() {
+      const info = (label, sub, right) => ({ label, sub, right, twoLine: !!sub, noChevron: true, go: () => {} });
+      return {
+        title: 'Heute',
+        build: () => {
+          const w = edition.weather, t = edition.today || {};
+          return [
+            ...(w ? [info(`${w.icon} ${w.place} ${w.min}–${w.max}°`, `${w.text} · Regen ${w.rain_chance} % · Wind ${w.wind} km/h`)] : []),
+            ...(w?.hours || []).map(h => info(`${h.hour} Uhr`, '', `${h.icon} ${h.temp}°`)),
+            ...(t.observances || []).slice(0, 3).map(o => info(o, 'Heute ist')),
+            ...(t.fact ? [info(t.fact.text, 'Fakt des Tages')] : []),
+            ...(t.name_days?.length ? [info(t.name_days.join(', '), 'Namenstag')] : []),
+          ];
+        },
+      };
+    }
+
+    function nanoMarketsPage() {
+      return {
+        title: 'Börse',
+        build: () => (edition.markets || []).map(q => ({ label: q.name, right: `${fmtQuote(q)} ${fmtChange(q.change)}`, noChevron: true, go: () => {} })),
+      };
     }
 
     function nanoArchivePage() {
@@ -1319,7 +2232,7 @@
       const el = document.createElement('div');
       el.className = 'nano-page';
       if (page.kind === 'article') {
-        const a = byId[page.id];
+        const a = findArticle(page.id);
         const audio = safeUrl(a.audio);
         el.innerHTML = `
           <div class="nano-article">
@@ -1330,6 +2243,7 @@
             <div class="body">${a.content_html || `<p>${esc(a.summary)}</p>`}</div>
             ${a.full_text ? '' : `<div class="note">${edition.private ? 'Nur Auszug im Feed' : 'Öffentliche Ausgabe: nur Anriss'} – Volltext beim Original.</div>`}
             ${safeUrl(a.link) ? `<a class="orig" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">Original öffnen ↗</a>` : ''}
+            <button class="orig" style="margin-left:14px" onclick="toggleSaved('${a.id}'); nanoRefresh()">${isSaved(a.id) ? '★ Gemerkt' : '☆ Merken'}</button>
           </div>`;
         fixMedia(el);
       } else if (page.kind === 'np') {

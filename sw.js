@@ -2,7 +2,7 @@
 // Seite + Ausgabe: Netz zuerst (immer frisch), offline aus dem Cache.
 // Schriften, Tailwind, Icons: Cache zuerst. Artikelbilder & Audio gehen direkt ans Netz
 // (Audio braucht Range-Anfragen, die Safari aus dem Cache nicht bedient).
-const CACHE = 'morgenblatt-v3';
+const CACHE = 'morgenblatt-v4';
 const SHELL = ['./', 'index.html', 'edition.json', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
 const STATIC_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.tailwindcss.com'];
 
