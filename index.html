@@ -1,160 +1,126 @@
 <!DOCTYPE html>
-<html lang="de" class="dark">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Daily Pulse | Personal Edition</title>
+  <title>Morgenblatt • Persönliche Ausgabe</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    .serif-title { font-family: 'Instrument Serif', serif; }
+    body { font-family: 'Inter', sans-serif; background-color: #F4F1EA; color: #1C1917; }
+    .newspaper-title { font-family: 'Playfair Display', serif; }
+    .drop-cap::first-letter { font-family: 'Playfair Display', serif; float: left; font-size: 3.2rem; line-height: 0.8; padding-top: 4px; padding-right: 8px; font-weight: 700; color: #1C1917; }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-20">
+<body class="min-h-screen pb-24 selection:bg-stone-300">
 
-  <!-- Top Header / Masthead (Zeitungs-Kopf) -->
-  <header class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <!-- Zeitungs-Kopf -->
+  <header class="border-b-2 border-stone-900 pt-6 pb-4 px-4 max-w-5xl mx-auto">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-stone-400 pb-4">
       <div>
-        <span class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Personal Edition • Wien</span>
-        <h1 class="serif-title text-4xl md:text-5xl tracking-tight text-white">The Daily Briefing</h1>
-      </div>
-
-      <!-- Integrierter Podcast / Audio-Briefing Player -->
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex items-center gap-4 shadow-lg">
-        <button onclick="document.getElementById('briefing-audio').play()" class="w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 flex items-center justify-center font-bold transition">
-          ▶
-        </button>
-        <div class="text-xs">
-          <div class="font-semibold text-white">Morgen-Podcast (KI-Briefing)</div>
-          <div class="text-zinc-400">Alle 5 Themen in 4 Min. • <span class="text-emerald-400">Bereit</span></div>
-        </div>
-        <audio id="briefing-audio" src="daily_briefing.mp3" preload="none"></audio>
+        <div class="text-xs uppercase tracking-widest font-semibold text-stone-600">Ausgabe Wien • Kuratiertes Redaktions-Briefing</div>
+        <h1 class="newspaper-title text-5xl md:text-6xl font-bold tracking-tight mt-1 text-stone-900">Morgenblatt</h1>
+        <div class="text-xs italic text-stone-500 mt-1">„Signal statt Rauschen — AI, Geopolitik, Medical Tech & Sport“</div>
       </div>
     </div>
 
-    <!-- Ressort-Navigation (Filter-Tabs) -->
-    <nav class="max-w-6xl mx-auto px-4 flex gap-2 overflow-x-auto pb-3 text-sm">
-      <button onclick="filterCategory('all')" class="cat-btn bg-zinc-100 text-zinc-900 px-3 py-1 rounded-full font-medium">Alle Ressorts</button>
-      <button onclick="filterCategory('med-ai')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🏥 Medical AI & Klinik-IT</button>
-      <button onclick="filterCategory('ai')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🤖 AI & Tech</button>
-      <button onclick="filterCategory('geopolitik')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🌍 Geopolitik</button>
-      <button onclick="filterCategory('rapid')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">⚽ SK Rapid</button>
-      <button onclick="filterCategory('darts')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🎯 Darts</button>
-    </nav>
+    <div class="flex justify-between items-center text-xs font-medium text-stone-600 pt-2 uppercase tracking-wider">
+      <span id="current-date">Heute</span>
+      <span>Status: <span id="sync-status" class="text-emerald-700 font-bold">Ausgabe aktuell</span></span>
+    </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 mt-8">
+  <!-- Fehler-Box (wird nur angezeigt, wenn JSON klemmt) -->
+  <div id="error-box" class="max-w-5xl mx-auto px-4 mt-4 hidden">
+    <div class="bg-red-100 border-l-4 border-red-700 p-4 text-red-900 text-sm">
+      <strong>Hinweis beim Laden:</strong> <span id="error-msg"></span>
+    </div>
+  </div>
 
-    <!-- Sektion 1: Das KI-Executive-Summary (Bento Box) -->
-    <section class="mb-12">
-      <div class="flex items-center gap-2 mb-4">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <h2 class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">TL;DR – Die Ausgabe in 60 Sekunden</h2>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Haupt-Summary: Medical AI & AI -->
-        <div class="md:col-span-2 bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
-          <span class="text-xs font-semibold text-emerald-400 uppercase">Fokus: Tech & Healthcare IT</span>
-          <h3 class="serif-title text-2xl mt-1 mb-3 text-white">KI-Arztbriefschreibung in Kliniken & neue Agenten-Frameworks</h3>
-          <p class="text-zinc-300 text-sm leading-relaxed">
-            Mehrere europäische Krankenhäuser testen lokale Sprachmodelle zur automatisierten Dokumentation in KIS-Systemen, um die Bürokratielast für Ärztinnen und Ärzte um bis zu 30 % zu senken. Parallel dazu verschiebt sich im AI-Sektor der Fokus von reinen Chatbots hin zu spezialisierten Workflow-Agenten.
-          </p>
-        </div>
-
-        <!-- Sport & Geopolitik Kompakt -->
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-between">
-          <div>
-            <span class="text-xs font-semibold text-amber-400 uppercase">Kompakt: Sport & Welt</span>
-            <ul class="mt-3 space-y-3 text-sm text-zinc-300">
-              <li><strong class="text-white">⚽ Rapid:</strong> Fokus auf das kommende Heimspiel in Hütteldorf, Kader-Update nach dem Abschlusstraining.</li>
-              <li><strong class="text-white">🎯 Darts:</strong> European Tour Ergebnisse & aktuelle Order of Merit Verschiebungen.</li>
-              <li><strong class="text-white">🌍 Geopolitik:</strong> Neue Analysen zur europäischen Sicherheitspolitik und Halbleiter-Lieferketten.</li>
-            </ul>
-          </div>
+  <!-- Hauptinhalt -->
+  <main class="max-w-5xl mx-auto px-4 mt-8">
+    
+    <!-- Leitartikel (Deep Dive) -->
+    <section id="deep-dive-section" class="mb-12 border-b-2 border-stone-900 pb-8">
+      <div class="text-xs uppercase tracking-widest font-bold text-red-800 mb-2">Leitartikel & Journal des Tages</div>
+      <div class="bg-stone-200/60 border border-stone-400 p-6 md:p-8 rounded-sm">
+        <h2 id="deep-title" class="newspaper-title text-3xl md:text-4xl font-bold text-stone-900 mb-4">Lade heutiges Thema...</h2>
+        <p id="deep-summary" class="drop-cap text-stone-800 text-base md:text-lg leading-relaxed mb-6">
+          Warte auf die morgendliche Zusammenfassung...
+        </p>
+        <div class="bg-stone-900 text-stone-100 p-4 text-sm rounded-sm">
+          <span class="font-bold text-stone-300 uppercase tracking-wider text-xs block mb-1">Warum das heute relevant ist:</span>
+          <span id="deep-takeaway">Wird analysiert...</span>
         </div>
       </div>
     </section>
 
-    <!-- Sektion 2: Das Magazin-Grid (Artikel-Karten) -->
-    <section>
-      <h2 class="text-xs uppercase tracking-widest text-zinc-400 font-semibold mb-4">Kuratierte Artikel der heutigen Ausgabe</h2>
-      
-      <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
-        <!-- Beispiel-Karte 1: Medical AI -->
-        <article data-category="med-ai" class="article-card bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-5 flex flex-col justify-between transition group">
-          <div>
-            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3">
-              <span class="text-emerald-400 font-medium">🏥 Medical AI & Klinik-IT</span>
-              <span>kma Online • 3 Min. Lesezeit</span>
-            </div>
-            <h3 class="font-semibold text-lg text-white group-hover:text-emerald-400 transition mb-2">
-              Ambient Clinical Intelligence: Wie Sprach-KI die Krankenhaus-Bürokratie halbiert
-            </h3>
-            <p class="text-zinc-400 text-sm line-clamp-3">
-              Statt stundenlanger Tipparbeit im KIS erfassen spezialisierte KI-Modelle das Arzt-Patienten-Gespräch und generieren strukturierte Entlassungsbriefe direkt zur Freigabe.
-            </p>
-          </div>
-          <a href="#" class="mt-4 inline-flex items-center text-xs font-semibold text-zinc-300 group-hover:text-white">
-            Artikel lesen →
-          </a>
-        </article>
-
-        <!-- Beispiel-Karte 2: SK Rapid -->
-        <article data-category="rapid" class="article-card bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-5 flex flex-col justify-between transition group">
-          <div>
-            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3">
-              <span class="text-green-400 font-medium">⚽ SK Rapid</span>
-              <span>Kurier / Laola1 • 2 Min.</span>
-            </div>
-            <h3 class="font-semibold text-lg text-white group-hover:text-green-400 transition mb-2">
-              Grün-Weiße Personalrochade vor dem nächsten Bundesliga-Kracher
-            </h3>
-            <p class="text-zinc-400 text-sm line-clamp-3">
-              In Hütteldorf laufen die Vorbereitungen auf Hochtouren. Welche taktischen Optionen sich im Mittelfeld bieten und wer rechtzeitig fit wird.
-            </p>
-          </div>
-          <a href="#" class="mt-4 inline-flex items-center text-xs font-semibold text-zinc-300 group-hover:text-white">
-            Artikel lesen →
-          </a>
-        </article>
-
-        <!-- Beispiel-Karte 3: Darts -->
-        <article data-category="darts" class="article-card bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-5 flex flex-col justify-between transition group">
-          <div>
-            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3">
-              <span class="text-amber-400 font-medium">🎯 Darts</span>
-              <span>Dartsnews • 2 Min.</span>
-            </div>
-            <h3 class="font-semibold text-lg text-white group-hover:text-amber-400 transition mb-2">
-              PDC ProTour: High-Averages und Überraschungen bei den Players Championships
-            </h3>
-            <p class="text-zinc-400 text-sm line-clamp-3">
-              Mit mehreren 105+ Averages zeigten die Top-Gesetzten starke Nerven an den Boards. Ein Überblick über alle Ergebnisse und das aktuelle Major-Race.
-            </p>
-          </div>
-          <a href="#" class="mt-4 inline-flex items-center text-xs font-semibold text-zinc-300 group-hover:text-white">
-            Artikel lesen →
-          </a>
-        </article>
-
-      </div>
-    </section>
+    <!-- Ressorts (Kategorien) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="articles-container">
+      <div class="col-span-3 text-center py-12 text-stone-500">Lade Ressorts...</div>
+    </div>
   </main>
 
   <script>
-    function filterCategory(cat) {
-      document.querySelectorAll('.article-card').forEach(card => {
-        if (cat === 'all' || card.dataset.category === cat) {
-          card.style.display = 'flex';
-        } else {
-          card.style.display = 'none';
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('de-DE', options);
+
+    // JSON einlesen mit Cache-Busting, damit du immer die neuste Version siehst
+    fetch('edition.json?t=' + new Date().getTime())
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP Fehler " + res.status + " beim Laden von edition.json");
+        return res.json();
+      })
+      .then(data => {
+        // Deep Dive befüllen
+        if(data.deep_dive) {
+          document.getElementById('deep-title').innerText = data.deep_dive.title || '';
+          document.getElementById('deep-summary').innerText = data.deep_dive.summary || '';
+          document.getElementById('deep-takeaway').innerText = data.deep_dive.takeaway || '';
         }
+
+        const container = document.getElementById('articles-container');
+        container.innerHTML = '';
+        
+        const categories = [
+          { key: 'geopolitik', label: '🌍 Geopolitik & Sicherheit' },
+          { key: 'ai', label: '🤖 AI & Strategie' },
+          { key: 'med_ai', label: '🏥 Medical AI & KIS' },
+          { key: 'rapid', label: '⚽ SK Rapid' },
+          { key: 'darts', label: '🎯 Darts' }
+        ];
+
+        // Kategorien iterieren und ins Raster packen
+        categories.forEach(cat => {
+          if(data[cat.key] && data[cat.key].length > 0) {
+            let col = document.createElement('div');
+            col.className = 'space-y-6';
+            col.innerHTML = `<div class="border-b-2 border-stone-900 pb-1 mb-4"><h3 class="newspaper-title text-2xl font-bold uppercase">${cat.label}</h3></div>`;
+            
+            data[cat.key].forEach(art => {
+              col.innerHTML += `
+                <article class="border-b border-stone-300 pb-4 group">
+                  <div class="text-[10px] uppercase font-semibold text-stone-500 mb-1">${art.source || ''}</div>
+                  <h4 class="font-bold text-stone-900 group-hover:underline text-base mb-2 leading-snug">
+                    <a href="${art.link || '#'}" target="_blank">${art.title || ''}</a>
+                  </h4>
+                  <p class="text-stone-700 text-sm leading-relaxed mb-3">${art.summary || ''}</p>
+                  <div class="bg-stone-200/80 p-2 text-xs text-stone-800 rounded-sm border-l-2 border-stone-900">
+                    <strong>Lernwert:</strong> ${art.takeaway || ''}
+                  </div>
+                </article>
+              `;
+            });
+            container.appendChild(col);
+          }
+        });
+      })
+      .catch(err => {
+        document.getElementById('sync-status').innerText = "Offline / Ladefehler";
+        document.getElementById('sync-status').className = "text-red-700 font-bold";
+        document.getElementById('error-box').classList.remove('hidden');
+        document.getElementById('error-msg').innerText = err.message;
       });
-    }
   </script>
 </body>
 </html>
