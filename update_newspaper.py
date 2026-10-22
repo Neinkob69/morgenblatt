@@ -72,14 +72,23 @@ def run():
     """
     
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         contents=prompt,
         config={"response_mime_type": "application/json"}
     )
     
+    raw_text = response.text.strip()
+    if raw_text.startswith("```json"):
+        raw_text = raw_text[7:]
+    elif raw_text.startswith("```"):
+        raw_text = raw_text[3:]
+    if raw_text.endswith("```"):
+        raw_text = raw_text[:-3]
+    raw_text = raw_text.strip()
+
     with open("edition.json", "w", encoding="utf-8") as f:
-        f.write(response.text)
-    print("edition.json erfolgreich erstellt.")
+        f.write(raw_text)
+    print("edition.json erfolgreich bereinigt und erstellt.")
 
 if __name__ == "__main__":
     run()
