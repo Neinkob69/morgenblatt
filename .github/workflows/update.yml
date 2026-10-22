@@ -1,12 +1,29 @@
 name: Tägliche Zeitung generieren
 
+# Baut die Ausgabe und veröffentlicht sie direkt auf GitHub Pages – ohne tägliche Commits.
+# Einmalig nötig: Settings → Pages → Source: „GitHub Actions“.
+
 on:
   schedule:
-    - cron: '0 6 * * *'  # Jeden Tag um 06:00 Uhr
+    - cron: '0 6 * * *'  # 06:00 UTC = 07:00 (Winter) bzw. 08:00 (Sommer) in Wien
   workflow_dispatch:      # Manueller Start-Button
+    inputs:
+      nur_frontend:
+        description: 'Nur die Oberfläche neu veröffentlichen (keine neue Ausgabe)'
+        type: boolean
+        default: false
+  push:                   # Änderungen an der Oberfläche sofort live stellen
+    branches: [main]
+    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**']
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -14,25 +31,44 @@ jobs:
     steps:
       - name: Auschecken des Repositories
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Python einrichten
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
+          cache: pip
 
       - name: Abhängigkeiten installieren
-        run: pip install feedparser google-genai
+        run: pip install -r requirements.txt
+
+      - name: Pages vorbereiten
+        id: pages
+        uses: actions/configure-pages@v5
 
       - name: Zeitungskurator ausführen
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python update_newspaper.py
-
-      - name: Änderungen committen und pushen
+          MORGENBLATT_PASSWORT: ${{ secrets.MORGENBLATT_PASSWORT }}
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+          OUT_DIR: _site
+          NUR_FRONTEND: ${{ github.event_name == 'push' || inputs.nur_frontend }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --staged --quiet || (git commit -m "Automatische Ausgabe aktualisiert" && git push)
+          mkdir -p _site
+          cp -r index.html sw.js manifest.webmanifest icons _site/
+          python update_newspaper.py
+
+      - name: Seite hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Auf GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
