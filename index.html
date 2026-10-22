@@ -59,35 +59,34 @@
 
     @media (min-width: 1024px) {
       .col-rule-right { border-right: 1px solid var(--rule-light); }
+      .col-rule-left { border-left: 1px solid var(--rule-light); }
     }
 
     .drop-cap::first-letter {
-      float: left; font-family: 'Playfair Display', Georgia, serif;
-      font-size: 3.9rem; line-height: 0.82; padding-top: 4px;
-      padding-right: 10px; padding-bottom: 2px; font-weight: 700;
-      color: var(--ink-primary);
+      float: left; font-family: 'Playfair Display', Georgia, serif; font-size: 3.9rem;
+      line-height: 0.82; padding-top: 4px; padding-right: 10px; padding-bottom: 2px;
+      font-weight: 700; color: var(--ink-primary);
     }
 
     @media (min-width: 768px) {
       .newspaper-columns-2 {
-        column-count: 2; column-gap: 1.75rem;
-        column-rule: 1px solid var(--rule-light);
+        column-count: 2; column-gap: 1.75rem; column-rule: 1px solid var(--rule-light);
         text-align: justify; hyphens: auto;
       }
     }
 
-    @keyframes eqPulse {
-      0%, 100% { height: 4px; }
-      50% { height: 15px; }
-    }
-    .eq-bar {
-      width: 2.5px; background-color: var(--accent-red);
-      display: inline-block; transition: height 0.2s ease;
-    }
+    .newsprint-graphic { background-color: var(--paper-elevated); border: 1px solid var(--rule-light); }
+
+    @keyframes eqPulse { 0%, 100% { height: 4px; } 50% { height: 15px; } }
+    .eq-bar { width: 2.5px; background-color: var(--accent-red); display: inline-block; transition: height 0.2s ease; }
     .playing .eq-bar-1 { animation: eqPulse 0.7s infinite ease-in-out 0.1s; }
     .playing .eq-bar-2 { animation: eqPulse 0.55s infinite ease-in-out 0.25s; }
     .playing .eq-bar-3 { animation: eqPulse 0.8s infinite ease-in-out 0.05s; }
     .playing .eq-bar-4 { animation: eqPulse 0.6s infinite ease-in-out 0.35s; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--paper-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--rule-light); }
   </style>
 </head>
 <body class="min-h-screen pb-24 lg:pb-16 selection:bg-[#8F241E] selection:text-white">
@@ -105,8 +104,10 @@
       </div>
 
       <div class="flex items-center gap-3 ml-auto">
-        <span id="sync-status" class="text-[#1B4D3E] font-bold">Lade aktuelle Ausgabe...</span>
+        <span id="sync-status" class="text-[#1B4D3E] font-bold">Lade Ausgabe...</span>
         <span class="text-[var(--rule-light)]">|</span>
+        <button onclick="toggleOriginalsModal()" class="hover:underline text-[var(--ink-secondary)] hidden sm:inline">Quellen & OPML</button>
+        <span class="text-[var(--rule-light)] hidden sm:inline">|</span>
         <button onclick="toggleDarkInk()" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition">
           <span id="themeIcon">☾</span>
           <span id="themeLabel">Abenddruck</span>
@@ -115,40 +116,31 @@
     </div>
   </div>
 
-  <!-- HAUPTCONTAINER -->
   <div class="max-w-[1380px] mx-auto px-3 sm:px-6 pt-3 sm:pt-6">
 
+    <!-- ZEITUNGSKOPF -->
     <header class="pb-2">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pb-4">
         
+        <!-- Linkes Ohr -->
         <div class="lg:col-span-3 order-2 lg:order-1 border border-[var(--rule-light)] p-3 bg-[var(--paper-elevated)]/40 flex lg:flex-col justify-between items-center lg:items-start gap-2">
           <div>
-            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)] font-semibold">
-              Ausgabe Wien • KI Kuratiert
-            </div>
-            <div class="text-xs text-[var(--ink-secondary)] mt-0.5 leading-snug">
-              Persönliche Zusammenstellung aus 8 Fach-Feeds.
-            </div>
+            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)] font-semibold">Ausgabe Wien • KI Kuratiert</div>
+            <div class="text-xs text-[var(--ink-secondary)] mt-0.5 leading-snug">Kein Ungelesen-Zähler. Deine wichtigsten Themenpunkte für den Tag.</div>
           </div>
           <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] border-t border-[var(--rule-light)] pt-1.5 w-full hidden lg:flex justify-between">
-            <span>JAHRGANG I</span>
-            <span>PREIS: 0,00 €</span>
+            <span>JAHRGANG I</span><span>PREIS: 0,00 €</span>
           </div>
         </div>
 
+        <!-- Titel -->
         <div class="lg:col-span-5 order-1 lg:order-2 text-center py-1">
-          <div class="font-mono-meta text-[10px] uppercase tracking-[0.25em] text-[var(--ink-muted)] mb-1" id="currentDateDisplay">
-            HEUTE
-          </div>
-          <h1 id="mastheadTitle" class="font-masthead text-5xl sm:text-6xl xl:text-7xl font-black tracking-tight leading-none uppercase select-none">
-            MELANGE
-          </h1>
-          <p id="mastheadSubtitle" class="font-serif-body italic text-sm sm:text-base text-[var(--ink-secondary)] mt-1.5">
-            Wiener Tagesblatt für KI, Klinik, Welt & Hütteldorf
-          </p>
+          <div class="font-mono-meta text-[10px] uppercase tracking-[0.25em] text-[var(--ink-muted)] mb-1" id="currentDateDisplay">HEUTE</div>
+          <h1 id="mastheadTitle" class="font-masthead text-5xl sm:text-6xl xl:text-7xl font-black tracking-tight leading-none uppercase select-none">MELANGE</h1>
+          <p id="mastheadSubtitle" class="font-serif-body italic text-sm sm:text-base text-[var(--ink-secondary)] mt-1.5">Wiener Tagesblatt für KI, Klinik, Welt & Hütteldorf</p>
         </div>
 
-        <!-- AUDIO PLAYER -->
+        <!-- Audio Modul -->
         <div id="audioEarBox" class="lg:col-span-4 order-3 border border-[var(--rule-heavy)] bg-[var(--paper-elevated)] p-3 relative">
           <div class="flex items-start justify-between gap-3">
             <button onclick="toggleAudioBriefing()" id="playBriefingBtn" class="w-11 h-11 shrink-0 bg-[var(--ink-primary)] text-[var(--paper-bg)] hover:bg-[var(--accent-red)] transition flex items-center justify-center font-mono-meta text-sm font-bold">
@@ -157,14 +149,13 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-1">
                 <div class="flex items-center gap-2">
-                  <span class="font-mono-meta text-[10px] uppercase tracking-wider font-bold text-[var(--accent-red)]">● HÖRAUSGABE (KI-STIMME)</span>
+                  <span class="font-mono-meta text-[10px] uppercase tracking-wider font-bold text-[var(--accent-red)]">● HÖRAUSGABE (PODCAST)</span>
                   <div class="flex items-end gap-0.5 h-3" id="eqVisualizer">
-                    <span class="eq-bar eq-bar-1 h-1"></span>
-                    <span class="eq-bar eq-bar-2 h-2"></span>
-                    <span class="eq-bar eq-bar-3 h-1.5"></span>
-                    <span class="eq-bar eq-bar-4 h-1"></span>
+                    <span class="eq-bar eq-bar-1 h-1"></span><span class="eq-bar eq-bar-2 h-2"></span>
+                    <span class="eq-bar eq-bar-3 h-1.5"></span><span class="eq-bar eq-bar-4 h-1"></span>
                   </div>
                 </div>
+                <button onclick="cycleSpeechRate()" id="speechRateBtn" class="font-mono-meta text-[10px] border border-[var(--rule-light)] px-1.5 py-0.2 hover:border-[var(--rule-heavy)]">1.0×</button>
               </div>
               <div id="audioTrackTitle" class="font-serif-body font-semibold text-sm truncate mt-0.5">Tages-Briefing abspielen</div>
               <div class="w-full bg-[var(--rule-light)] h-1 mt-2 overflow-hidden">
@@ -172,31 +163,48 @@
               </div>
             </div>
           </div>
+          <!-- KAPITEL MARKEN -->
+          <div class="mt-2.5 pt-2 border-t border-[var(--rule-light)] flex items-center justify-between gap-1 overflow-x-auto font-mono-meta text-[10px]">
+            <button onclick="playSpecificChapter(0)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-0">01 Klinik-IT</button>
+            <span class="text-[var(--rule-light)]">·</span>
+            <button onclick="playSpecificChapter(1)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-1">02 KI</button>
+            <span class="text-[var(--rule-light)]">·</span>
+            <button onclick="playSpecificChapter(2)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-2">03 Geopolitik</button>
+            <span class="text-[var(--rule-light)]">·</span>
+            <button onclick="playSpecificChapter(3)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-3">04 Sport</button>
+          </div>
         </div>
       </div>
 
       <nav class="double-rule-top bold-rule-bottom py-2 flex items-center justify-between overflow-x-auto gap-4 font-mono-meta text-xs uppercase tracking-wider">
         <div class="flex items-center gap-1 sm:gap-5 shrink-0">
-          <span class="font-bold text-[var(--accent-red)] underline underline-offset-4 px-1.5 py-0.5">Titelseite (Alle Ressorts)</span>
-        </div>
-        <div class="hidden xl:flex items-center gap-2 text-[11px] text-[var(--ink-muted)] shrink-0">
-          <span>REDAKTIONSSCHLUSS: 06:00 UHR</span>
+          <button onclick="setSection('all')" data-sec="all" class="sec-nav-btn font-bold text-[var(--accent-red)] underline underline-offset-4 px-1.5 py-0.5">Titelseite</button>
+          <span class="text-[var(--rule-light)]">/</span>
+          <button onclick="setSection('med-ai')" data-sec="med-ai" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">Klinik-IT</button>
+          <span class="text-[var(--rule-light)]">/</span>
+          <button onclick="setSection('ai')" data-sec="ai" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">KI</button>
+          <span class="text-[var(--rule-light)]">/</span>
+          <button onclick="setSection('geopolitik')" data-sec="geopolitik" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">Geopolitik</button>
+          <span class="text-[var(--rule-light)]">/</span>
+          <button onclick="setSection('rapid')" data-sec="rapid" class="sec-nav-btn hover:text-[var(--accent-green)] px-1.5 py-0.5">SK Rapid</button>
+          <span class="text-[var(--rule-light)]">/</span>
+          <button onclick="setSection('darts')" data-sec="darts" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">Darts</button>
         </div>
       </nav>
     </header>
 
-    <!-- SEITE 1: LEITARTIKEL & SPIEGEL -->
+    <!-- SEITE 1: ABOVE THE FOLD -->
     <section id="frontPageSpread" class="mt-4 pb-8 double-rule-bottom">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- SPALTE LINKS: KURZMELDUNGEN -->
+        <!-- SPALTE LINKS: DAS WICHTIGSTE (3 Kurzmeldungen) -->
         <aside class="lg:col-span-3 col-rule-right lg:pr-5 flex flex-col justify-between">
           <div>
             <div class="bold-rule-top hairline-bottom py-1 mb-3 flex items-center justify-between">
               <h2 class="font-mono-meta text-[11px] uppercase tracking-widest font-bold">Das Wichtigste heute</h2>
             </div>
-            <div class="space-y-4" id="left-sidebar-content">
-              <div class="text-[var(--ink-muted)] italic font-serif-body text-sm">Ressorts werden geladen...</div>
+            <div class="space-y-4" id="leftSidebarContent">
+              <div class="text-[var(--ink-muted)] italic font-serif-body text-sm">Lade Meldungen...</div>
             </div>
           </div>
         </aside>
@@ -207,28 +215,31 @@
             <span>SCHWERPUNKT • LEITARTIKEL</span>
           </div>
           <h2 id="deep-title" class="font-masthead text-3xl sm:text-4xl xl:text-[42px] font-bold leading-[1.08] tracking-tight hover:text-[var(--accent-red)] transition">
-            Heutiges Hauptthema wird generiert...
+            Lade Leitartikel...
           </h2>
           <p id="deep-summary" class="font-serif-body italic text-lg sm:text-xl text-[var(--ink-secondary)] mt-2.5 leading-snug">
-            Bitte warte kurz auf die KI-Zusammenfassung...
+            Bitte warte kurz...
           </p>
           <div class="newspaper-columns-2 text-[16px] leading-[1.62] text-[var(--ink-primary)] mt-4">
-            <p id="deep-body" class="drop-cap mb-3">Die tagesaktuellen Daten werden aus der JSON geladen.</p>
+            <p id="deep-body" class="drop-cap mb-3">Die Daten fließen direkt in den Browser.</p>
           </div>
-          <div class="mt-4 bg-[var(--paper-elevated)] p-4 border-l-4 border-[var(--accent-red)]">
-            <span class="font-mono-meta text-[10px] uppercase font-bold text-[var(--accent-red)] block mb-1">Redaktionelles Takeaway</span>
-            <span id="deep-takeaway" class="font-serif-body text-sm">Analyse folgt...</span>
+          <div class="mt-4 pt-3 bold-rule-top bg-[var(--paper-elevated)]/60 p-3">
+            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Redaktions-Notiz (Takeaway)</div>
+            <blockquote id="deep-takeaway" class="font-serif-body italic text-sm mt-1 text-[var(--ink-primary)]">
+              Analyse wird geladen.
+            </blockquote>
           </div>
         </main>
 
-        <!-- SPALTE RECHTS: SPORT & MEHR -->
+        <!-- SPALTE RECHTS: SPORT & WELT -->
         <aside class="lg:col-span-3 flex flex-col justify-between gap-6">
           <div class="border-2 border-[var(--rule-heavy)] p-3.5 bg-[var(--paper-elevated)]/50">
             <div class="flex items-center justify-between border-b border-[var(--rule-heavy)] pb-1.5 mb-3">
-              <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Sport & Welt</span>
+              <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Sport-Telegramm</span>
+              <span class="font-mono-meta text-[10px] uppercase text-[var(--accent-green)] font-bold">Hütteldorf & PDC</span>
             </div>
-            <div id="right-sidebar-content" class="space-y-4">
-              <!-- Dynamischer Inhalt -->
+            <div id="rightSidebarContent" class="space-y-4">
+              <!-- Dynamischer Sport-Inhalt -->
             </div>
           </div>
         </aside>
@@ -236,26 +247,64 @@
       </div>
     </section>
 
-    <!-- ALLE RESSORTS GRID -->
+    <!-- ALLE ARTIKEL -->
     <section class="mt-8">
+      <!-- Suchleiste -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 bold-rule-bottom mb-6">
         <div>
-          <span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">WEITERE MELDUNGEN</span>
-          <h2 class="font-masthead text-2xl sm:text-3xl font-bold">Die restliche Ausgabe</h2>
+          <span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">RESSORT-ÜBERSICHT & EINZELMELDUNGEN</span>
+          <h2 id="activeSectionHeading" class="font-masthead text-2xl sm:text-3xl font-bold">Alle Ressorts der Ausgabe</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="keywordSearchInput" oninput="filterArticlesByKeyword(this.value)" placeholder="Suchen (z.B. KIS, Rapid)..." class="bg-[var(--paper-elevated)] border border-[var(--rule-heavy)] px-3 py-1.5 text-xs font-mono-meta w-60 sm:w-64 focus:outline-none">
+          <button onclick="resetFilters()" class="font-mono-meta text-[11px] uppercase px-2.5 py-1.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)]">Reset</button>
         </div>
       </div>
       <div id="newspaperArticlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6">
-        <!-- Artikel per JS eingesetzt -->
+        <!-- Dynamisches Raster -->
       </div>
     </section>
 
+    <!-- ZEITUNGS-IMPRESSUM / FOOTER -->
     <footer class="mt-16 pt-6 double-rule-top text-center sm:text-left">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-8 hairline-bottom text-xs text-[var(--ink-secondary)]">
+        <div>
+          <div class="font-masthead font-bold text-base text-[var(--ink-primary)] uppercase" id="footerPaperTitle">MORGENBLATT</div>
+          <p class="mt-1 leading-relaxed">Automatisch generierte, KI-kuratierte Tagesausgabe für Medizin-IT, KI, Geopolitik, Rapid & Darts.</p>
+        </div>
+        <div>
+          <div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold text-[var(--ink-primary)]">Verbundene Systeme</div>
+          <p class="mt-1 font-mono-meta text-[11px] leading-relaxed text-[var(--ink-muted)]">GitHub Actions • Gemini-3-Flash JSON API • Tailwind CSS • RSS Parsing Pipeline</p>
+        </div>
+        <div class="md:text-right flex flex-col justify-between">
+          <div>
+            <span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Auslieferung</span>
+            <p class="mt-1">Statisch via GitHub Pages.</p>
+          </div>
+          <div class="mt-3">
+            <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="font-mono-meta text-[11px] uppercase underline hover:text-[var(--accent-red)]">↑ Zurück zur Titelseite</button>
+          </div>
+        </div>
+      </div>
       <div class="py-4 flex flex-col sm:flex-row justify-between items-center font-mono-meta text-[10px] text-[var(--ink-muted)] gap-2">
         <span>GEDRUCKT AUF DIGITALEM ZEITUNGSPAPIER (#F4F1EA)</span>
-        <span>KI-KURATIERT VIA GEMINI-3-FLASH</span>
+        <span>KEINE WERBUNG • KEINE INBOX-SCHULDGEFÜHLE</span>
       </div>
     </footer>
+
   </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--paper-elevated)] border-t-2 border-[var(--rule-heavy)] px-2 py-1.5 shadow-2xl">
+    <div class="flex items-center justify-around font-mono-meta text-[10px] uppercase">
+      <button onclick="setSection('all')" data-mob-sec="all" class="mob-nav-btn flex flex-col items-center py-1 px-2 font-bold text-[var(--accent-red)]"><span class="text-sm">📰</span><span>Seite 1</span></button>
+      <button onclick="setSection('med-ai')" data-mob-sec="med-ai" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🏥</span><span>Klinik-IT</span></button>
+      <button onclick="setSection('ai')" data-mob-sec="ai" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🤖</span><span>AI</span></button>
+      <button onclick="setSection('geopolitik')" data-mob-sec="geopolitik" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🌍</span><span>Welt</span></button>
+      <button onclick="setSection('rapid')" data-mob-sec="rapid" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">⚽</span><span>Rapid</span></button>
+      <button onclick="setSection('darts')" data-mob-sec="darts" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🎯</span><span>Darts</span></button>
+    </div>
+  </nav>
 
   <!-- LESE-MODAL -->
   <div id="readerModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs overflow-y-auto p-2 sm:p-6">
@@ -272,45 +321,42 @@
       </div>
       <div id="modalBody" class="font-serif-body text-lg leading-relaxed space-y-4 text-[var(--ink-primary)]"></div>
       <div class="mt-8 pt-4 bold-rule-top flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <a id="modalExternalLink" href="#" target="_blank" rel="noopener" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Originalartikel öffnen ↗</a>
+        <a id="modalExternalLink" href="#" target="_blank" rel="noopener" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Originalartikel auf der Quell-Website öffnen ↗</a>
       </div>
     </div>
   </div>
 
   <script>
-    // Datum setzen
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('de-DE', options).toUpperCase();
 
-    // Globale Daten
-    let allArticles = [];
+    let articles = [];
+    let currentSection = 'all';
     let BRIEFING_CHAPTERS = [];
     let isPlayingAudio = false;
     let currentChapterIndex = 0;
+    let speechRate = 1.0;
     let progressInterval = null;
 
-    // Helper für das Layout
-    function renderSmallArticle(art, isRightSidebar = false) {
-      const catColor = art.catKey === 'rapid' ? 'text-[var(--accent-green)]' : (isRightSidebar ? 'text-[var(--accent-red)]' : 'text-[var(--ink-muted)]');
+    // Helper für Sidebar-Artikel (Original-Klassen!)
+    function renderSmallArticle(art, isSport = false) {
+      const catColor = art.catKey === 'rapid' ? 'text-[var(--accent-green)]' : (isSport ? 'text-[var(--accent-red)]' : 'text-[var(--ink-muted)]');
       return `
         <div class="pb-3 hairline-bottom cursor-pointer group" onclick="openReaderModal('${art.id}')">
           <div class="font-mono-meta text-[10px] uppercase tracking-wider ${catColor} font-semibold">${art.categoryLabel}</div>
           <h3 class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${art.title}</h3>
-          <p class="text-sm text-[var(--ink-secondary)] mt-1 leading-relaxed">${art.summary.substring(0, 100)}...</p>
+          <p class="text-sm text-[var(--ink-secondary)] mt-1 leading-relaxed">${art.summary.substring(0, 100)}... <span class="font-mono-meta text-[10px] uppercase">→ S. X</span></p>
         </div>
       `;
     }
 
-    // JSON LADEN UND VERTEILEN
+    // JSON LADEN
     fetch('edition.json?t=' + new Date().getTime())
-      .then(res => {
-        if (!res.ok) throw new Error("Netzwerkfehler");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         document.getElementById('sync-status').innerText = 'Ausgabe aktuell ✓';
 
-        // 1. DEEP DIVE (Mitte)
+        // 1. Deep Dive
         if(data.deep_dive) {
           document.getElementById('deep-title').innerText = data.deep_dive.title || '';
           document.getElementById('deep-summary').innerText = data.deep_dive.summary || '';
@@ -318,21 +364,21 @@
           document.getElementById('deep-takeaway').innerText = data.deep_dive.takeaway || '';
         }
 
-        // 2. KATEGORIEN SAMMELN
-        const categories = [
-          { key: 'med_ai', label: 'I. Klinik-IT & Medical AI' },
-          { key: 'ai', label: 'II. Künstliche Intelligenz' },
-          { key: 'geopolitik', label: 'III. Geopolitik & Sicherheit' },
-          { key: 'rapid', label: 'IV. SK Rapid Wien' },
-          { key: 'darts', label: 'V. Darts PDC' }
+        // 2. Artikel in Liste konvertieren
+        const catMap = [
+          { key: 'med_ai', id: 'med-ai', label: 'I. Klinik-IT' },
+          { key: 'ai', id: 'ai', label: 'II. Künstliche Intelligenz' },
+          { key: 'geopolitik', id: 'geopolitik', label: 'III. Geopolitik & Sicherheit' },
+          { key: 'rapid', id: 'rapid', label: 'IV. SK Rapid' },
+          { key: 'darts', id: 'darts', label: 'V. Darts' }
         ];
 
-        categories.forEach(cat => {
+        catMap.forEach(cat => {
           if(data[cat.key]) {
             data[cat.key].forEach((art, idx) => {
-              allArticles.push({
-                id: cat.key + '-' + idx,
-                catKey: cat.key,
+              articles.push({
+                id: cat.id + '-' + idx,
+                catKey: cat.id,
                 categoryLabel: cat.label,
                 source: art.source || 'Redaktion',
                 title: art.title,
@@ -344,61 +390,93 @@
           }
         });
 
-        // 3. LAYOUT BEFÜLLEN
+        // 3. Sidebars befüllen
         let leftSidebarHtml = '';
         let rightSidebarHtml = '';
-        let gridHtml = '';
-        
-        let leftCount = 0;
-        let rightCount = 0;
+        let leftAdded = 0; let rightAdded = 0;
 
-        allArticles.forEach(art => {
-          // Die ersten 3 Artikel kommen nach Links
-          if (leftCount < 3 && (art.catKey === 'med_ai' || art.catKey === 'ai' || art.catKey === 'geopolitik')) {
-            leftSidebarHtml += renderSmallArticle(art, false);
-            leftCount++;
-          } 
-          // Die ersten 2 Sport-Artikel kommen nach Rechts
-          else if (rightCount < 2 && (art.catKey === 'rapid' || art.catKey === 'darts')) {
-            rightSidebarHtml += renderSmallArticle(art, true);
-            rightCount++;
-          } 
-          // Der Rest wandert in das große Raster unten
-          else {
-            gridHtml += `
-              <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] lg:border-r lg:border-[var(--rule-light)] lg:pr-5 group cursor-pointer" onclick="openReaderModal('${art.id}')">
-                <div>
-                  <div class="font-mono-meta text-[10px] uppercase tracking-wider mb-1.5 text-[var(--accent-red)] font-bold">${art.categoryLabel}</div>
-                  <h3 class="font-masthead text-xl font-bold leading-snug group-hover:underline text-[var(--ink-primary)]">${art.title}</h3>
-                  <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${art.summary}</p>
-                </div>
-                <div class="mt-4 pt-2 hairline-top font-mono-meta text-[10px] text-[var(--ink-muted)]">
-                  <span class="uppercase font-semibold group-hover:text-[var(--accent-red)]">Artikel lesen →</span>
-                </div>
-              </article>
-            `;
+        articles.forEach(art => {
+          if (leftAdded < 3 && ['med-ai', 'ai', 'geopolitik'].includes(art.catKey)) {
+            leftSidebarHtml += renderSmallArticle(art, false); leftAdded++;
+          } else if (rightAdded < 2 && ['rapid', 'darts'].includes(art.catKey)) {
+            rightSidebarHtml += renderSmallArticle(art, true); rightAdded++;
           }
         });
 
-        document.getElementById('left-sidebar-content').innerHTML = leftSidebarHtml || 'Keine Kurzmeldungen.';
-        document.getElementById('right-sidebar-content').innerHTML = rightSidebarHtml || 'Keine Sport-Updates.';
-        document.getElementById('newspaperArticlesGrid').innerHTML = gridHtml;
+        document.getElementById('leftSidebarContent').innerHTML = leftSidebarHtml || 'Keine Kurzmeldungen.';
+        document.getElementById('rightSidebarContent').innerHTML = rightSidebarHtml || 'Keine Sport-Updates.';
+        
+        // Raster bauen
+        renderArticlesGrid(articles);
 
-        // 4. AUDIO PODCAST (Generiert Sprechtext aus echten Daten)
+        // 4. Audio-Skript (Podcast) befüllen
         BRIEFING_CHAPTERS = [
-          { title: 'KI & Geopolitik', text: 'Guten Morgen. Das Wichtigste aus IT und Weltpolitik: ' + (data.ai?.[0]?.summary || '') + ' ' + (data.geopolitik?.[0]?.summary || '') },
-          { title: 'Sport kompakt', text: 'Kommen wir zum Sport. ' + (data.rapid?.[0]?.summary || '') + ' ' + (data.darts?.[0]?.summary || '') }
+          { title: 'Klinik-IT', text: data.med_ai?.[0] ? `Schwerpunkt Klinik-IT: ${data.med_ai[0].summary}` : 'Keine Updates zur Klinik-IT.' },
+          { title: 'KI & Agenten', text: data.ai?.[0] ? `Künstliche Intelligenz: ${data.ai[0].summary}` : 'Keine Updates zur KI.' },
+          { title: 'Geopolitik', text: data.geopolitik?.[0] ? `Geopolitik: ${data.geopolitik[0].summary}` : 'Keine Updates zur Weltpolitik.' },
+          { title: 'Sport', text: (data.rapid?.[0] ? `Rapid: ${data.rapid[0].summary} ` : '') + (data.darts?.[0] ? `Darts: ${data.darts[0].summary}` : '') }
         ];
-
       })
       .catch(err => {
-        document.getElementById('sync-status').innerText = 'Offline / Ladefehler';
-        document.getElementById('sync-status').className = 'text-[#8F241E] font-bold';
+        document.getElementById('sync-status').innerText = 'Ladefehler';
+        document.getElementById('sync-status').className = 'text-red-700 font-bold';
       });
 
-    // INTERAKTIONEN
+    function renderArticlesGrid(list) {
+      const grid = document.getElementById('newspaperArticlesGrid');
+      if (!list.length) { grid.innerHTML = `<div class="col-span-full py-12 text-center text-[var(--ink-muted)]">Keine Artikel gefunden.</div>`; return; }
+
+      grid.innerHTML = list.map((art, idx) => {
+        const hasRightRule = (idx % 4 !== 3) ? 'lg:border-r lg:border-[var(--rule-light)] lg:pr-5' : '';
+        const catColor = art.catKey === 'rapid' ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]';
+        return `
+          <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] ${hasRightRule} group cursor-pointer" onclick="openReaderModal('${art.id}')">
+            <div>
+              <div class="font-mono-meta text-[10px] uppercase tracking-wider mb-1.5 ${catColor} font-bold">${art.categoryLabel}</div>
+              <h3 class="font-masthead text-xl font-bold leading-snug group-hover:underline text-[var(--ink-primary)]">${art.title}</h3>
+              <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${art.summary}</p>
+            </div>
+            <div class="mt-4 pt-2 hairline-top flex items-center justify-between font-mono-meta text-[10px] text-[var(--ink-muted)]">
+              <span class="truncate max-w-[70%]">${art.source}</span>
+              <span class="uppercase font-semibold text-[var(--ink-primary)] group-hover:text-[var(--accent-red)]">Lesen →</span>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // Navigation (Ressorts)
+    function setSection(sec) {
+      currentSection = sec;
+      const frontSpread = document.getElementById('frontPageSpread');
+      if (sec === 'all') {
+        frontSpread.classList.remove('hidden');
+        renderArticlesGrid(articles);
+      } else {
+        frontSpread.classList.add('hidden');
+        renderArticlesGrid(articles.filter(a => a.catKey === sec));
+      }
+      
+      document.querySelectorAll('.sec-nav-btn').forEach(btn => {
+        btn.dataset.sec === sec ? btn.classList.add('font-bold', 'text-[var(--accent-red)]', 'underline') : btn.classList.remove('font-bold', 'text-[var(--accent-red)]', 'underline');
+      });
+      document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+        btn.dataset.mobSec === sec ? btn.classList.add('font-bold', 'text-[var(--accent-red)]') : btn.classList.remove('font-bold', 'text-[var(--accent-red)]');
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Suche
+    function filterArticlesByKeyword(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return setSection(currentSection);
+      renderArticlesGrid(articles.filter(a => a.title.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q)));
+    }
+    function resetFilters() { document.getElementById('keywordSearchInput').value = ''; setSection('all'); }
+
+    // Modals
     function openReaderModal(id) {
-      const art = allArticles.find(a => a.id === id);
+      const art = articles.find(a => a.id === id);
       if(!art) return;
       document.getElementById('modalCategory').textContent = art.categoryLabel;
       document.getElementById('modalMeta').textContent = art.source;
@@ -409,43 +487,40 @@
       document.getElementById('readerModal').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
-
     function closeReaderModal() {
-      document.getElementById('readerModal').classList.add('hidden');
-      document.body.style.overflow = '';
+      document.getElementById('readerModal').classList.add('hidden'); document.body.style.overflow = '';
     }
 
-    // AUDIO LOGIK
+    // Audio Player mit Kapitel-Logik
     function toggleAudioBriefing() {
       if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
-      if (isPlayingAudio) { stopAudioBriefing(); } 
-      else { playSpecificChapter(0); }
+      isPlayingAudio ? stopAudioBriefing() : playSpecificChapter(0);
     }
-
+    
     function playSpecificChapter(index) {
       if (!('speechSynthesis' in window) || !BRIEFING_CHAPTERS[index]) return;
-      window.speechSynthesis.cancel();
-      clearInterval(progressInterval);
-
-      currentChapterIndex = index;
-      isPlayingAudio = true;
+      window.speechSynthesis.cancel(); clearInterval(progressInterval);
+      
+      currentChapterIndex = index; isPlayingAudio = true;
       document.getElementById('playIcon').textContent = '⏸';
       document.getElementById('audioEarBox').classList.add('playing');
-      document.getElementById('audioTrackTitle').textContent = 'Liest: ' + BRIEFING_CHAPTERS[index].title;
+      document.getElementById('audioTrackTitle').textContent = 'Liest: 0' + (index+1) + ' ' + BRIEFING_CHAPTERS[index].title;
+
+      document.querySelectorAll('.chapter-pill').forEach((el, idx) => {
+        idx === index ? el.classList.add('border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]') : el.classList.remove('border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]');
+      });
 
       const utterance = new SpeechSynthesisUtterance(BRIEFING_CHAPTERS[index].text);
-      utterance.lang = 'de-DE';
-      utterance.rate = 1.1;
-
-      let progress = 5;
-      document.getElementById('audioProgressBar').style.width = `${progress}%`;
+      utterance.lang = 'de-DE'; utterance.rate = speechRate;
+      
+      let progress = 5; document.getElementById('audioProgressBar').style.width = `${progress}%`;
       progressInterval = setInterval(() => {
         if (progress < 95) { progress += 2; document.getElementById('audioProgressBar').style.width = `${progress}%`; }
       }, 450);
 
       utterance.onend = () => {
         if (currentChapterIndex + 1 < BRIEFING_CHAPTERS.length) {
-          setTimeout(() => playSpecificChapter(currentChapterIndex + 1), 500);
+          setTimeout(() => playSpecificChapter(currentChapterIndex + 1), 600);
         } else { stopAudioBriefing(); }
       };
       window.speechSynthesis.speak(utterance);
@@ -453,26 +528,33 @@
 
     function stopAudioBriefing() {
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      clearInterval(progressInterval);
-      isPlayingAudio = false;
+      clearInterval(progressInterval); isPlayingAudio = false;
       document.getElementById('playIcon').textContent = '▶';
       document.getElementById('audioEarBox').classList.remove('playing');
       document.getElementById('audioTrackTitle').textContent = 'Tages-Briefing abspielen';
       document.getElementById('audioProgressBar').style.width = '0%';
+      document.querySelectorAll('.chapter-pill').forEach(el => el.classList.remove('border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]'));
+    }
+    
+    function cycleSpeechRate() {
+      const rates = [1.0, 1.2, 1.4];
+      speechRate = rates[(rates.indexOf(speechRate) + 1) % rates.length];
+      document.getElementById('speechRateBtn').textContent = `${speechRate.toFixed(1)}×`;
+      if (isPlayingAudio) playSpecificChapter(currentChapterIndex);
     }
 
-    // THEME & NAMEN
+    // Extras
     function toggleDarkInk() {
       const isDark = document.documentElement.classList.toggle('dark-ink');
       document.getElementById('themeIcon').textContent = isDark ? '☀' : '☾';
       document.getElementById('themeLabel').textContent = isDark ? 'Tagespapier' : 'Abenddruck';
     }
-
     function handlePaperNameChange(val) {
       const title = val.split('|')[0];
       document.getElementById('mastheadTitle').textContent = title;
       document.title = `${title} — Persönliche Tagesausgabe`;
     }
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReaderModal(); });
   </script>
 </body>
 </html>
