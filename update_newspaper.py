@@ -74,7 +74,7 @@ def run():
         try:
             print(f"Sende Anfrage an Gemini (Versuch {attempt + 1}/{max_retries})...")
             response = client.models.generate_content(
-                model="gemini-3.8-flash",
+                model="gemini-3-flash",
                 contents=prompt,
                 config={"response_mime_type": "application/json"} # WICHTIG: Verhindert den Timeout!
             )
