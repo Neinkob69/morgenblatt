@@ -2,8 +2,8 @@ name: Tägliche Zeitung generieren
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Läuft jeden Tag um 06:00 Uhr früh
-  workflow_dispatch:      # Erlaubt manuellen Start per Klick
+    - cron: '0 6 * * *'  # Jeden Tag um 06:00 Uhr
+  workflow_dispatch:      # Manueller Start-Button
 
 permissions:
   contents: write
@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Auschecken des Repositories
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Python einrichten
         uses: actions/setup-python@v5
@@ -32,5 +34,5 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add edition.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Automatische Ausgabe aktualisiert" && git push origin main)
+          git add -A
+          git diff --staged --quiet || (git commit -m "Automatische Ausgabe aktualisiert" && git push)
