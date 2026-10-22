@@ -27,6 +27,7 @@ import os
 import re
 import socket
 import time
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
@@ -47,13 +48,23 @@ PASSWORD = os.environ.get("MORGENBLATT_PASSWORT", "")
 TZ = ZoneInfo("Europe/Vienna")
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+# Ausweichmodelle, falls das Hauptmodell überlastet ist (503) – kommagetrennt überschreibbar
+GEMINI_FALLBACK_MODELS = os.environ.get("GEMINI_FALLBACK_MODELS", "gemini-3.7-flash,gemini-3.5-flash-lite").split(",")
 GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")
 KDF_ITERATIONS = 310_000
 SUMMARY_BATCH = 40          # Artikel pro Zusammenfassungs-Anfrage
 TEASER_MAX_CHARS = 900      # weniger Text im Feed = nur Teaser → Volltext nachladen
 MAX_CONTENT_CHARS = 40000   # Obergrenze pro Artikel, hält edition.json schlank
 
-socket.setdefaulttimeout(20)
+FEED_TIMEOUT = 45  # manche Server (SWP, IP) antworten langsam
+socket.setdefaulttimeout(FEED_TIMEOUT)
+
+# Manche Feeds liefern Bots eine HTML-Seite statt RSS – mit vollständigen Browser-Headern klappt's
+FEED_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+    "Accept-Language": "de-AT,de;q=0.9,en;q=0.8",
+}
 
 # Erlaubtes HTML im Lesemodus – alles andere (Skripte, Styles, iframes, Tracking) fliegt raus
 ALLOWED_TAGS = {
@@ -148,15 +159,51 @@ def feed_list(section):
 
 # ───────────────────────── 1. Feeds holen ─────────────────────────
 
+def download_feed(url):
+    request = urllib.request.Request(url, headers=FEED_HEADERS)
+    with urllib.request.urlopen(request, timeout=FEED_TIMEOUT) as response:
+        data, final_url = response.read(), response.geturl()
+    # content-location sorgt dafür, dass relative Links im Feed richtig aufgelöst werden
+    return feedparser.parse(data, response_headers={"content-location": final_url}), data, final_url
+
+
+def discover_feed(html_bytes, base_url):
+    """Liefert die Adresse eine Webseite statt eines Feeds, steht der Feed meist im <link rel="alternate">."""
+    page = html_bytes.decode("utf-8", "replace")
+    for tag in re.findall(r"<link\b[^>]*>", page, re.I):
+        if re.search(r"rel=[\"']?alternate", tag, re.I) and re.search(r"application/(rss|atom)\+xml", tag, re.I):
+            href = re.search(r"href=[\"']([^\"']+)", tag, re.I)
+            if href:
+                return urllib.parse.urljoin(base_url, html.unescape(href.group(1)))
+    return None
+
+
 def fetch_feed(feed_cfg):
     url = feed_cfg["url"]
     try:
-        parsed = feedparser.parse(url, agent="Mozilla/5.0 (compatible; Morgenblatt/2.0)")
+        if not url.startswith(("http://", "https://")):
+            parsed = feedparser.parse(url)  # lokale Datei, z. B. zum Testen
+        else:
+            parsed, data, final_url = download_feed(url)
+            alternative = not parsed.entries and discover_feed(data, final_url)
+            if alternative and alternative != url:
+                print(f"  → {url} ist eine Webseite, Feed gefunden unter {alternative}")
+                parsed, _, _ = download_feed(alternative)
         if parsed.bozo and not parsed.entries:
             raise ValueError(parsed.get("bozo_exception", "kein gültiger Feed"))
         return parsed, None
     except Exception as e:
         return None, str(e)
+
+
+def short_error(message):
+    """Fehlergrund fürs Quellen-Fenster: kurz und verständlich."""
+    code = re.search(r"HTTP Error (\d+)", message)
+    if code:
+        return f"HTTP {code.group(1)}"
+    if "timed out" in message:
+        return "Zeitüberschreitung"
+    return "kein gültiger Feed"
 
 
 def normalize_entry(entry, section_id, feed_name, link_fallback):
@@ -191,7 +238,7 @@ def normalize_entry(entry, section_id, feed_name, link_fallback):
 def collect_articles(config):
     settings = config.get("einstellungen", {})
     per_feed = settings.get("max_artikel_pro_feed", 8)
-    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.get("max_alter_tage", 4))
+    now = datetime.now(timezone.utc)
 
     jobs = [(section, feed) for section in config["ressorts"] for feed in feed_list(section)]
     with ThreadPoolExecutor(max_workers=8) as pool:
@@ -202,13 +249,15 @@ def collect_articles(config):
         url = feed_cfg["url"]
         if error:
             print(f"  ✗ {url}: {error}")
-            feed_status[url] = {"url": url, "name": feed_cfg.get("name") or url, "ok": False, "count": 0}
+            feed_status[url] = {"url": url, "name": feed_cfg.get("name") or url, "ok": False, "count": 0, "error": short_error(error)}
             continue
 
         feed_name = feed_cfg.get("name") or to_text(parsed.feed.get("title", "")) or url
+        # Fachjournale erscheinen seltener – pro Feed dürfen "max_alter_tage" und "max_artikel" abweichen
+        cutoff = now - timedelta(days=feed_cfg.get("max_alter_tage", settings.get("max_alter_tage", 4)))
         count = 0
         for entry in parsed.entries:
-            if count >= per_feed:
+            if count >= feed_cfg.get("max_artikel", per_feed):
                 break
             art = normalize_entry(entry, section["id"], feed_name, parsed.feed.get("link", ""))
             published = art["published"] and datetime.fromisoformat(art["published"])
@@ -278,21 +327,33 @@ def enrich_fulltext(articles, enabled):
 
 # ───────────────────────── 3. KI-Redaktion ─────────────────────────
 
+_failed_models = set()
+
+
 def ask_gemini(client, prompt, retries=3):
-    for attempt in range(retries):
-        try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config={"response_mime_type": "application/json", "temperature": 0.4},
-            )
-            text = response.text.strip()
-            text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
-            return json.loads(text)
-        except Exception as e:
-            print(f"  Gemini-Fehler (Versuch {attempt + 1}/{retries}): {e}")
-            if attempt < retries - 1:
-                time.sleep(15 * (attempt + 1))
+    """Bei Überlast erst mit wachsendem Abstand neu versuchen, dann aufs nächste Modell ausweichen.
+    Ein Modell, das in diesem Lauf komplett ausgefallen ist, wird danach übersprungen."""
+    models = [m.strip() for m in [GEMINI_MODEL, *GEMINI_FALLBACK_MODELS] if m.strip()]
+    for model in dict.fromkeys(models):
+        if model in _failed_models:
+            continue
+        for attempt in range(retries):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config={"response_mime_type": "application/json", "temperature": 0.4},
+                )
+                text = response.text.strip()
+                text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
+                return json.loads(text)
+            except Exception as e:
+                print(f"  Gemini-Fehler mit {model} (Versuch {attempt + 1}/{retries}): {str(e)[:160]}")
+                if "404" in str(e) or "NOT_FOUND" in str(e):
+                    break  # Modell gibt's nicht (mehr) – gleich weiter
+                if attempt < retries - 1:
+                    time.sleep(20 * 2 ** attempt)
+        _failed_models.add(model)
     return None
 
 
@@ -439,7 +500,7 @@ def build_edition(config):
     if api_key:
         from google import genai
         client = genai.Client(api_key=api_key)
-        print(f"KI-Redaktion mit {GEMINI_MODEL} …")
+        print(f"KI-Redaktion mit {GEMINI_MODEL} (Ausweichmodelle: {', '.join(GEMINI_FALLBACK_MODELS)}) …")
         summarize(client, articles)
         front = edit_front_page(client, articles, sections)
     else:

@@ -23,9 +23,11 @@ Podcast-Folgen holt sie sich bei jedem Lauf von der live-Seite zurück.
 ## Einrichten
 
 1. **Settings → Pages → Source: „GitHub Actions“** (einmalig).
-2. **Settings → Secrets and variables → Actions:**
+2. **Settings → Secrets and variables → Actions → Tab „Secrets“ → „New repository secret“:**
    - `GEMINI_API_KEY` – KI-Redaktion und Sprachausgabe
    - `MORGENBLATT_PASSWORT` – macht die Ausgabe privat (siehe unten)
+
+   Wichtig: *Repository secret*, nicht „Variable“ und nicht als Secret der Umgebung `github-pages`.
 3. Actions → „Tägliche Zeitung generieren“ → *Run workflow*.
 
 Danach läuft alles von selbst: jeden Morgen eine neue Ausgabe, Änderungen an `index.html` gehen beim Push sofort live.
@@ -34,10 +36,13 @@ Danach läuft alles von selbst: jeden Morgen eine neue Ausgabe, Änderungen an `
 
 Alles steht in `feeds.json`: Ressorts, Reihenfolge, Icons, welche Ressorts im „Telegramm“ landen,
 wie viele Artikel pro Feed, wie lange das Archiv reicht, Podcast-Stimmen.
-Feeds dürfen als URL oder als `{"url": "...", "name": "..."}` eingetragen sein.
+Feeds dürfen als URL oder als `{"url": "...", "name": "...", "max_alter_tage": 60, "max_artikel": 3}`
+eingetragen sein – praktisch für Fachjournale, die nur alle paar Wochen ein neues Heft bringen.
+Liefert eine Adresse statt des Feeds eine Webseite, sucht die Action dort nach dem verlinkten Feed.
 
 - **Ohne KI:** Fehlt `GEMINI_API_KEY` oder streikt Gemini, erscheint die Ausgabe trotzdem – nur ohne Zusammenfassungen.
-- **Modelle wechseln:** `GEMINI_MODEL` bzw. `GEMINI_TTS_MODEL` im Workflow setzen.
+  Ist das Hauptmodell überlastet, weicht die Action auf Ersatzmodelle aus.
+- **Modelle wechseln:** `GEMINI_MODEL`, `GEMINI_FALLBACK_MODELS` bzw. `GEMINI_TTS_MODEL` im Workflow setzen.
 
 ## Private Ausgabe & Urheberrecht
 
