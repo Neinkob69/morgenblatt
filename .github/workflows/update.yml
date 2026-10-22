@@ -2,11 +2,15 @@ name: Tägliche Zeitung generieren
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Jeden Tag um 06:00 Uhr
+    - cron: '0 6 * * *'  # 06:00 UTC = 07:00 (Winter) bzw. 08:00 (Sommer) in Wien
   workflow_dispatch:      # Manueller Start-Button
 
 permissions:
   contents: write
+
+concurrency:
+  group: zeitung
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -20,10 +24,11 @@ jobs:
       - name: Python einrichten
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
+          cache: pip
 
       - name: Abhängigkeiten installieren
-        run: pip install feedparser google-genai
+        run: pip install -r requirements.txt
 
       - name: Zeitungskurator ausführen
         env:
@@ -34,5 +39,5 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add edition.json feeds.opml
           git diff --staged --quiet || (git commit -m "Automatische Ausgabe aktualisiert" && git push)

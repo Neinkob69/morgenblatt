@@ -1,71 +1,318 @@
 {
-  "deep_dive": {
-    "title": "The Endless Chip War",
-    "summary": "Im Interview spricht Rakesh Kumar, Autor von 'Chip Age', darüber, wie Halbleiter zur entscheidenden Ressource der Weltpolitik wurden und warum der globale Kampf um die Chip-Dominanz unvermindert anhält.",
-    "takeaway": "Mikrochips sind das Fundament moderner Geopolitik; Wer die Fertigung kontrolliert, bestimmt die globale Machtarchitektur."
+ "version": 2,
+ "generated_at": "2026-10-22T11:19:58+00:00",
+ "ai": true,
+ "title": "MORGENBLATT",
+ "subtitle": "Wiener Privatredaktion • Kuratierte Tagesausgabe",
+ "telegram": {
+  "titel": "Sport-Telegramm",
+  "unterzeile": "Hütteldorf & PDC"
+ },
+ "sections": [
+  {
+   "id": "med_ai",
+   "name": "Klinik-IT",
+   "short": "Klinik-IT",
+   "icon": "🏥",
+   "telegram": false,
+   "color": "",
+   "feeds": [
+    {
+     "url": "https://www.thelancet.com/rssfeed/landig_current.xml",
+     "name": "thelancet.com",
+     "ok": true,
+     "count": null
+    },
+    {
+     "url": "https://www.kma-online.de/rss/aktuelle-meldungen.xml",
+     "name": "kma-online.de",
+     "ok": true,
+     "count": null
+    },
+    {
+     "url": "https://www.e-health-com.de/rss.xml",
+     "name": "e-health-com.de",
+     "ok": true,
+     "count": null
+    }
+   ]
   },
-  "geopolitik": [
+  {
+   "id": "ai",
+   "name": "Künstliche Intelligenz",
+   "short": "KI",
+   "icon": "🤖",
+   "telegram": false,
+   "color": "",
+   "feeds": [
     {
-      "title": "Deception in Mass Autonomous Warfare",
-      "source": "War on the Rocks",
-      "link": "https://warontherocks.com/deception-in-mass-autonomous-warfare/",
-      "summary": "Ein Blick auf taktische Täuschungsmanöver in zeitalterübergreifender Kriegführung und wie diese Prinzipien auf autonome Drohnenschwärme übertragen werden.",
-      "takeaway": "Auch im Zeitalter autonomer Systeme bleibt strategische Täuschung der Schlüssel zur Überlebensfähigkeit auf dem Schlachtfeld."
+     "url": "https://anchor.fm/s/f7cac464/podcast/rss",
+     "name": "anchor.fm",
+     "ok": true,
+     "count": null
     },
     {
-      "title": "Neue EU-Strategie: Ein eigener Plan für die Arktis",
-      "source": "Stiftung Wissenschaft und Politik",
-      "link": "https://www.tagesschau.de/ausland/europa/eu-arktis-strategie-100.html",
-      "summary": "Die EU reagiert auf die veränderte Lage im Hohen Norden und präsentiert eine neue Arktis-Strategie für wirtschaftliche, ökologische und militärische Belange.",
-      "takeaway": "Europa beansprucht eine aktivere Rolle in der geopolitisch immer bedeutsameren Arktisregion."
-    }
-  ],
-  "ai": [
-    {
-      "title": "Qwen 3.6 lokal: Perplexity Computer braucht keine Cloud mehr",
-      "source": "Künstliche Intelligenz",
-      "link": "https://www.heise.de/news/Perplexity-Computer-Lokale-Nutzung-mit-Qwen-3-6-auf-dem-Mac-11496128.html?wt_mc=rss.red.ho.themen.k%C3%BCnstliche+intelligenz.beitrag.beitrag",
-      "summary": "Die Rechnersteuerung von Perplexity lässt sich mittels Qwen 3.6 ohne Cloud-Anbindung direkt auf ausreichend ausgestatteten Apple-Silicon-Macs ausführen.",
-      "takeaway": "Lokale KI-Assistenten gewinnen an Leistungsfähigkeit und steigern Unabhängigkeit sowie Datenschutz im Alltag."
+     "url": "https://www.oneusefulthing.org/feed",
+     "name": "oneusefulthing.org",
+     "ok": true,
+     "count": null
     },
     {
-      "title": "Why AI Companies Are Betting Personality Beats Intelligence",
-      "source": "The AI Daily Brief: Artificial Intelligence News and Analysis",
-      "link": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Companies-Are-Betting-Personality-Beats-Intelligence-e3qqj9k",
-      "summary": "Im Wettbewerb führender KI-Modelle rückt die Persönlichkeit und Tonalität der Sprachmodelle gegenüber reiner Intelligenz zunehmend in den Fokus der Entwickler.",
-      "takeaway": "Nutzerbindung entsteht oft über die emotionale Nahbarkeit einer KI, nicht nur über akademische Benchmarks."
+     "url": "https://www.heise.de/thema/Kuenstliche-Intelligenz.xml",
+     "name": "heise.de",
+     "ok": true,
+     "count": null
     }
-  ],
-  "med_ai": [
+   ]
+  },
+  {
+   "id": "geopolitik",
+   "name": "Geopolitik & Sicherheit",
+   "short": "Geopolitik",
+   "icon": "🌍",
+   "telegram": false,
+   "color": "",
+   "feeds": [
     {
-      "title": "[Editorial] Epilepsy research in the AI era",
-      "source": "The Lancet Digital Health",
-      "link": "https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00138-X/fulltext?rss=yes",
-      "summary": "Der US-Senat treibt den 'National Plan for Epilepsy Act' voran, um die Erforschung neurologischer Erkrankungen mithilfe moderner KI-Methoden massiv auszubauen.",
-      "takeaway": "Staatliche Initiativen schaffen die nötigen Rahmenbedingungen für den Durchbruch von KI in der Epilepsieforschung."
+     "url": "https://sicherheitspod.de/feed/mp3/",
+     "name": "sicherheitspod.de",
+     "ok": true,
+     "count": null
     },
     {
-      "title": "[Comment] Need for ethical use of artificial intelligence in humanitarian data collection to address aid shortfalls",
-      "source": "The Lancet Digital Health",
-      "link": "https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00068-3/fulltext?rss=yes",
-      "summary": "Angesichts gekürzter Hilfsgelder wird der Einsatz von KI bei der Datenerhebung in Krisengebieten unverzichtbar, bringt jedoch strikte ethische Herausforderungen mit sich.",
-      "takeaway": "Effizienzgewinne durch KI im humanitären Sektor dürfen keinesfalls auf Kosten von Datenschutz und Ethik erzielt werden."
-    }
-  ],
-  "rapid": [
-    {
-      "title": "Partnerschaft mit stackwork - SK Rapid",
-      "source": "\"\"SK Rapid\" OR \"Rapid Wien\"\" - Google News",
-      "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTFBybVJhUG1aS0U0eHE3Vy1WdzZrMHJ4eHhjOWV0SXB2RExmckJLMmh5RFRWNmZyTjJNSVg1LWRjV0FNR0Jadkk4WnE0N3dxR1J1VU44T0hXVGhQOV9YOVBEbTZybm53SE05dWpRMGxhaWw5MW84Si1LNg?oc=5",
-      "summary": "Der SK Rapid verkündet eine offizielle neue Partnerschaft mit dem Technologieunternehmen stackwork.",
-      "takeaway": "Grün-Weiß baut sein digitales Netzwerk und Sponsorenportfolio weiter aus."
+     "url": "https://warontherocks.com/feed/",
+     "name": "warontherocks.com",
+     "ok": true,
+     "count": null
     },
     {
-      "title": "Gewinnspiel: Gewinne VIP-Tickets für das 351. Wiener Derby zwischen Austria und Rapid - Sky Sport Austria",
-      "source": "\"\"SK Rapid\" OR \"Rapid Wien\"\" - Google News",
-      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOMzlBaTdpNFRuMGJzWC1McFdMZDZONmFmTVBpX3BLNzFMeTdKcVpmWGJyU2xmcThPVXQ2bnhuU0hjdll0RjU3Mm5wUGhpcWdHSDhZN2tSVXRXWXh0eXJpZlUxZExuRTcwVWFFZk8wWkFOR0NNSHZqNXlJN19KakZKRi1GQnlYVG02ODhCclZueDRzWXBXU3JueUJlWGU5RDNsQ2xVQktBR0c1QWh6VGtqUmpHcWlTV0k?oc=5", "summary": "Sky Sport Austria verlost exklusive VIP-Karten für das bevorstehende 351. Wiener Stadtderby.",
-      "takeaway": "Das Aufeinandertreffen der beiden Erzrivalen wirft bereits seine Schatten voraus."
+     "url": "https://www.swp-berlin.org/rss.xml",
+     "name": "swp-berlin.org",
+     "ok": true,
+     "count": null
+    },
+    {
+     "url": "https://zeitschrift-ip.dgap.org/de/rss.xml",
+     "name": "zeitschrift-ip.dgap.org",
+     "ok": true,
+     "count": null
     }
-  ],
-  "darts": []
+   ]
+  },
+  {
+   "id": "rapid",
+   "name": "SK Rapid",
+   "short": "Rapid",
+   "icon": "⚽",
+   "telegram": true,
+   "color": "gruen",
+   "feeds": [
+    {
+     "url": "https://news.google.com/rss/search?q=%22SK+Rapid%22+OR+%22Rapid+Wien%22&hl=de-AT&gl=AT&ceid=AT:de",
+     "name": "news.google.com",
+     "ok": true,
+     "count": null
+    }
+   ]
+  },
+  {
+   "id": "darts",
+   "name": "Darts",
+   "short": "Darts",
+   "icon": "🎯",
+   "telegram": true,
+   "color": "",
+   "feeds": [
+    {
+     "url": "https://www.dartsnews.de/feed",
+     "name": "dartsnews.de",
+     "ok": true,
+     "count": null
+    },
+    {
+     "url": "https://www.dartn.de/rss.xml",
+     "name": "dartn.de",
+     "ok": true,
+     "count": null
+    }
+   ]
+  }
+ ],
+ "lead": {
+  "article": null,
+  "headline": "The Endless Chip War",
+  "subline": "Im Interview spricht Rakesh Kumar, Autor von 'Chip Age', darüber, wie Halbleiter zur entscheidenden Ressource der Weltpolitik wurden und warum der globale Kampf um die Chip-Dominanz unvermindert anhält.",
+  "text": "Im Interview spricht Rakesh Kumar, Autor von 'Chip Age', darüber, wie Halbleiter zur entscheidenden Ressource der Weltpolitik wurden und warum der globale Kampf um die Chip-Dominanz unvermindert anhält.",
+  "takeaway": "Mikrochips sind das Fundament moderner Geopolitik; Wer die Fertigung kontrolliert, bestimmt die globale Machtarchitektur."
+ },
+ "top": [
+  "e67cc6d4d3",
+  "de24bfe217",
+  "47268daae1"
+ ],
+ "briefing": [
+  {
+   "id": "intro",
+   "title": "Begrüßung",
+   "text": "Guten Morgen. Der Schwerpunkt heute: The Endless Chip War. Im Interview spricht Rakesh Kumar, Autor von 'Chip Age', darüber, wie Halbleiter zur entscheidenden Ressource der Weltpolitik wurden und warum der globale Kampf um die Chip-Dominanz unvermindert anhält."
+  },
+  {
+   "id": "med_ai",
+   "title": "Klinik-IT",
+   "text": "Klinik-IT: Der US-Senat treibt den 'National Plan for Epilepsy Act' voran, um die Erforschung neurologischer Erkrankungen mithilfe moderner KI-Methoden massiv auszubauen."
+  },
+  {
+   "id": "ai",
+   "title": "KI",
+   "text": "KI: Die Rechnersteuerung von Perplexity lässt sich mittels Qwen 3.6 ohne Cloud-Anbindung direkt auf ausreichend ausgestatteten Apple-Silicon-Macs ausführen."
+  },
+  {
+   "id": "geopolitik",
+   "title": "Geopolitik",
+   "text": "Geopolitik: Ein Blick auf taktische Täuschungsmanöver in zeitalterübergreifender Kriegführung und wie diese Prinzipien auf autonome Drohnenschwärme übertragen werden."
+  },
+  {
+   "id": "rapid",
+   "title": "Rapid",
+   "text": "Rapid: Der SK Rapid verkündet eine offizielle neue Partnerschaft mit dem Technologieunternehmen stackwork."
+  }
+ ],
+ "articles": [
+  {
+   "id": "e67cc6d4d3",
+   "section": "med_ai",
+   "source": "The Lancet Digital Health",
+   "title": "[Editorial] Epilepsy research in the AI era",
+   "link": "https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00138-X/fulltext?rss=yes",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Der US-Senat treibt den &#x27;National Plan for Epilepsy Act&#x27; voran, um die Erforschung neurologischer Erkrankungen mithilfe moderner KI-Methoden massiv auszubauen.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "[Editorial] Epilepsy research in the AI era",
+   "summary": "Der US-Senat treibt den 'National Plan for Epilepsy Act' voran, um die Erforschung neurologischer Erkrankungen mithilfe moderner KI-Methoden massiv auszubauen.",
+   "takeaway": "Staatliche Initiativen schaffen die nötigen Rahmenbedingungen für den Durchbruch von KI in der Epilepsieforschung."
+  },
+  {
+   "id": "de24bfe217",
+   "section": "med_ai",
+   "source": "The Lancet Digital Health",
+   "title": "[Comment] Need for ethical use of artificial intelligence in humanitarian data collection to address aid shortfalls",
+   "link": "https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00068-3/fulltext?rss=yes",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Angesichts gekürzter Hilfsgelder wird der Einsatz von KI bei der Datenerhebung in Krisengebieten unverzichtbar, bringt jedoch strikte ethische Herausforderungen mit sich.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "[Comment] Need for ethical use of artificial intelligence in humanitarian data collection to address aid shortfalls",
+   "summary": "Angesichts gekürzter Hilfsgelder wird der Einsatz von KI bei der Datenerhebung in Krisengebieten unverzichtbar, bringt jedoch strikte ethische Herausforderungen mit sich.",
+   "takeaway": "Effizienzgewinne durch KI im humanitären Sektor dürfen keinesfalls auf Kosten von Datenschutz und Ethik erzielt werden."
+  },
+  {
+   "id": "47268daae1",
+   "section": "ai",
+   "source": "Künstliche Intelligenz",
+   "title": "Qwen 3.6 lokal: Perplexity Computer braucht keine Cloud mehr",
+   "link": "https://www.heise.de/news/Perplexity-Computer-Lokale-Nutzung-mit-Qwen-3-6-auf-dem-Mac-11496128.html?wt_mc=rss.red.ho.themen.k%C3%BCnstliche+intelligenz.beitrag.beitrag",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Die Rechnersteuerung von Perplexity lässt sich mittels Qwen 3.6 ohne Cloud-Anbindung direkt auf ausreichend ausgestatteten Apple-Silicon-Macs ausführen.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "Qwen 3.6 lokal: Perplexity Computer braucht keine Cloud mehr",
+   "summary": "Die Rechnersteuerung von Perplexity lässt sich mittels Qwen 3.6 ohne Cloud-Anbindung direkt auf ausreichend ausgestatteten Apple-Silicon-Macs ausführen.",
+   "takeaway": "Lokale KI-Assistenten gewinnen an Leistungsfähigkeit und steigern Unabhängigkeit sowie Datenschutz im Alltag."
+  },
+  {
+   "id": "2d6a5b344d",
+   "section": "ai",
+   "source": "The AI Daily Brief: Artificial Intelligence News and Analysis",
+   "title": "Why AI Companies Are Betting Personality Beats Intelligence",
+   "link": "https://podcasters.spotify.com/pod/show/nlw/episodes/Why-AI-Companies-Are-Betting-Personality-Beats-Intelligence-e3qqj9k",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Im Wettbewerb führender KI-Modelle rückt die Persönlichkeit und Tonalität der Sprachmodelle gegenüber reiner Intelligenz zunehmend in den Fokus der Entwickler.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "Why AI Companies Are Betting Personality Beats Intelligence",
+   "summary": "Im Wettbewerb führender KI-Modelle rückt die Persönlichkeit und Tonalität der Sprachmodelle gegenüber reiner Intelligenz zunehmend in den Fokus der Entwickler.",
+   "takeaway": "Nutzerbindung entsteht oft über die emotionale Nahbarkeit einer KI, nicht nur über akademische Benchmarks."
+  },
+  {
+   "id": "57a63a8f60",
+   "section": "geopolitik",
+   "source": "War on the Rocks",
+   "title": "Deception in Mass Autonomous Warfare",
+   "link": "https://warontherocks.com/deception-in-mass-autonomous-warfare/",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Ein Blick auf taktische Täuschungsmanöver in zeitalterübergreifender Kriegführung und wie diese Prinzipien auf autonome Drohnenschwärme übertragen werden.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "Deception in Mass Autonomous Warfare",
+   "summary": "Ein Blick auf taktische Täuschungsmanöver in zeitalterübergreifender Kriegführung und wie diese Prinzipien auf autonome Drohnenschwärme übertragen werden.",
+   "takeaway": "Auch im Zeitalter autonomer Systeme bleibt strategische Täuschung der Schlüssel zur Überlebensfähigkeit auf dem Schlachtfeld."
+  },
+  {
+   "id": "188048c59d",
+   "section": "geopolitik",
+   "source": "Stiftung Wissenschaft und Politik",
+   "title": "Neue EU-Strategie: Ein eigener Plan für die Arktis",
+   "link": "https://www.tagesschau.de/ausland/europa/eu-arktis-strategie-100.html",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Die EU reagiert auf die veränderte Lage im Hohen Norden und präsentiert eine neue Arktis-Strategie für wirtschaftliche, ökologische und militärische Belange.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "Neue EU-Strategie: Ein eigener Plan für die Arktis",
+   "summary": "Die EU reagiert auf die veränderte Lage im Hohen Norden und präsentiert eine neue Arktis-Strategie für wirtschaftliche, ökologische und militärische Belange.",
+   "takeaway": "Europa beansprucht eine aktivere Rolle in der geopolitisch immer bedeutsameren Arktisregion."
+  },
+  {
+   "id": "72762dad28",
+   "section": "rapid",
+   "source": "SK Rapid",
+   "title": "Partnerschaft mit stackwork",
+   "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTFBybVJhUG1aS0U0eHE3Vy1WdzZrMHJ4eHhjOWV0SXB2RExmckJLMmh5RFRWNmZyTjJNSVg1LWRjV0FNR0Jadkk4WnE0N3dxR1J1VU44T0hXVGhQOV9YOVBEbTZybm53SE05dWpRMGxhaWw5MW84Si1LNg?oc=5",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Der SK Rapid verkündet eine offizielle neue Partnerschaft mit dem Technologieunternehmen stackwork.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "Partnerschaft mit stackwork",
+   "summary": "Der SK Rapid verkündet eine offizielle neue Partnerschaft mit dem Technologieunternehmen stackwork.",
+   "takeaway": "Grün-Weiß baut sein digitales Netzwerk und Sponsorenportfolio weiter aus."
+  },
+  {
+   "id": "9a5273c539",
+   "section": "rapid",
+   "source": "Sky Sport Austria",
+   "title": "Gewinnspiel: Gewinne VIP-Tickets für das 351. Wiener Derby zwischen Austria und Rapid",
+   "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOMzlBaTdpNFRuMGJzWC1McFdMZDZONmFmTVBpX3BLNzFMeTdKcVpmWGJyU2xmcThPVXQ2bnhuU0hjdll0RjU3Mm5wUGhpcWdHSDhZN2tSVXRXWXh0eXJpZlUxZExuRTcwVWFFZk8wWkFOR0NNSHZqNXlJN19KakZKRi1GQnlYVG02ODhCclZueDRzWXBXU3JueUJlWGU5RDNsQ2xVQktBR0c1QWh6VGtqUmpHcWlTV0k?oc=5",
+   "author": "",
+   "published": null,
+   "image": null,
+   "audio": null,
+   "content_html": "<p>Sky Sport Austria verlost exklusive VIP-Karten für das bevorstehende 351. Wiener Stadtderby.</p>",
+   "full_text": false,
+   "reading_minutes": 1,
+   "headline": "Gewinnspiel: Gewinne VIP-Tickets für das 351. Wiener Derby zwischen Austria und Rapid",
+   "summary": "Sky Sport Austria verlost exklusive VIP-Karten für das bevorstehende 351. Wiener Stadtderby.",
+   "takeaway": "Das Aufeinandertreffen der beiden Erzrivalen wirft bereits seine Schatten voraus."
+  }
+ ]
 }

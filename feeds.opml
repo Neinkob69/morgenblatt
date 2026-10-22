@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>MORGENBLATT – Quellen</title></head>
+  <body>
+    <outline text="Klinik-IT">
+      <outline type="rss" text="thelancet.com" xmlUrl="https://www.thelancet.com/rssfeed/landig_current.xml"/>
+      <outline type="rss" text="kma-online.de" xmlUrl="https://www.kma-online.de/rss/aktuelle-meldungen.xml"/>
+      <outline type="rss" text="e-health-com.de" xmlUrl="https://www.e-health-com.de/rss.xml"/>
+    </outline>
+    <outline text="Künstliche Intelligenz">
+      <outline type="rss" text="anchor.fm" xmlUrl="https://anchor.fm/s/f7cac464/podcast/rss"/>
+      <outline type="rss" text="oneusefulthing.org" xmlUrl="https://www.oneusefulthing.org/feed"/>
+      <outline type="rss" text="heise.de" xmlUrl="https://www.heise.de/thema/Kuenstliche-Intelligenz.xml"/>
+    </outline>
+    <outline text="Geopolitik &amp; Sicherheit">
+      <outline type="rss" text="sicherheitspod.de" xmlUrl="https://sicherheitspod.de/feed/mp3/"/>
+      <outline type="rss" text="warontherocks.com" xmlUrl="https://warontherocks.com/feed/"/>
+      <outline type="rss" text="swp-berlin.org" xmlUrl="https://www.swp-berlin.org/rss.xml"/>
+      <outline type="rss" text="zeitschrift-ip.dgap.org" xmlUrl="https://zeitschrift-ip.dgap.org/de/rss.xml"/>
+    </outline>
+    <outline text="SK Rapid">
+      <outline type="rss" text="news.google.com" xmlUrl="https://news.google.com/rss/search?q=%22SK+Rapid%22+OR+%22Rapid+Wien%22&amp;hl=de-AT&amp;gl=AT&amp;ceid=AT:de"/>
+    </outline>
+    <outline text="Darts">
+      <outline type="rss" text="dartsnews.de" xmlUrl="https://www.dartsnews.de/feed"/>
+      <outline type="rss" text="dartn.de" xmlUrl="https://www.dartn.de/rss.xml"/>
+    </outline>
+  </body>
+</opml>

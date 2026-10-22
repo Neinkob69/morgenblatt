@@ -2,13 +2,30 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>MORGENBLATT — Wiener Privatredaktion</title>
+  <meta name="description" content="Persönliche Tageszeitung aus RSS-Feeds – kuratiert, zusammengefasst, zum Vorlesen.">
+  <meta name="theme-color" content="#F4F1EA">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Morgenblatt">
+  <script>
+    // Abenddruck + Ansicht vor dem ersten Zeichnen setzen, damit nichts aufblitzt
+    try {
+      const ink = localStorage.getItem('ink');
+      if (ink === 'dark' || (!ink && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark-ink');
+      const view = location.hash === '#nano' ? 'nano' : (localStorage.getItem('view') || 'paper');
+      document.documentElement.dataset.view = view;
+    } catch (e) {}
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap" rel="stylesheet">
-  
+
   <style>
     :root {
       --paper-bg: #F4F1EA;
@@ -62,7 +79,7 @@
       .col-rule-left { border-left: 1px solid var(--rule-light); }
     }
 
-    .drop-cap::first-letter {
+    .drop-cap::first-letter, .article-body > p:first-of-type::first-letter {
       float: left; font-family: 'Playfair Display', Georgia, serif; font-size: 3.9rem;
       line-height: 0.82; padding-top: 4px; padding-right: 10px; padding-bottom: 2px;
       font-weight: 700; color: var(--ink-primary);
@@ -76,6 +93,26 @@
     }
 
     .newsprint-graphic { background-color: var(--paper-elevated); border: 1px solid var(--rule-light); }
+    .newsprint-img { filter: grayscale(0.9) sepia(0.15) contrast(1.05); transition: filter 0.3s ease; }
+    .newsprint-img:hover { filter: none; }
+
+    /* Lesemodus: Volltext aus dem Feed */
+    .article-body p { margin: 0 0 1em; }
+    .article-body h2, .article-body h3, .article-body h4 { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; line-height: 1.2; margin: 1.4em 0 0.5em; }
+    .article-body h2 { font-size: 1.45em; } .article-body h3 { font-size: 1.25em; } .article-body h4 { font-size: 1.1em; }
+    .article-body a { color: var(--accent-red); text-decoration: underline; text-underline-offset: 3px; }
+    .article-body img { max-width: 100%; height: auto; margin: 1.2em auto; border: 1px solid var(--rule-light); filter: grayscale(0.9) sepia(0.15); transition: filter 0.3s ease; }
+    .article-body img:hover { filter: none; }
+    .article-body figure { margin: 1.4em 0; }
+    .article-body figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-muted); }
+    .article-body blockquote { border-left: 3px solid var(--accent-red); padding-left: 1em; font-style: italic; color: var(--ink-secondary); margin: 1.2em 0; }
+    .article-body ul { list-style: disc; padding-left: 1.4em; margin: 0 0 1em; }
+    .article-body ol { list-style: decimal; padding-left: 1.4em; margin: 0 0 1em; }
+    .article-body li { margin: 0.3em 0; }
+    .article-body pre { overflow-x: auto; background: var(--paper-elevated); padding: 0.8em; font-size: 0.8em; }
+    .article-body table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 1em 0; display: block; overflow-x: auto; }
+    .article-body th, .article-body td { border: 1px solid var(--rule-light); padding: 0.35em 0.5em; }
+    .article-body hr { border: 0; border-top: 1px solid var(--rule-light); margin: 1.5em 0; }
 
     @keyframes eqPulse { 0%, 100% { height: 4px; } 50% { height: 15px; } }
     .eq-bar { width: 2.5px; background-color: var(--accent-red); display: inline-block; transition: height 0.2s ease; }
@@ -87,10 +124,96 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--paper-bg); }
     ::-webkit-scrollbar-thumb { background: var(--rule-light); }
+
+    /* Ansicht umschalten: Zeitung ⇄ Nano */
+    html[data-view="nano"] #viewPaper, html[data-view="nano"] #mobileNav { display: none; }
+    html:not([data-view="nano"]) #viewNano { display: none; }
+    html[data-view="nano"] body { padding-bottom: 0; }
+
+    /* ───────── NANO-MODUS (iPod-Menü) ───────── */
+    .nano-wrap { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 12px; }
+    .nano-device {
+      --body: linear-gradient(150deg, #f1f1f3 0%, #d4d5d9 55%, #bfc0c5 100%);
+      --wheel: #fbfbfc; --wheel-label: #9b9ca3; --center: linear-gradient(160deg, #e9eaee, #cfd0d5);
+      width: min(380px, 100%); height: min(760px, calc(100dvh - 64px)); min-height: 520px;
+      border-radius: 46px; background: var(--body); padding: 20px 20px 24px;
+      display: flex; flex-direction: column; gap: 20px;
+      box-shadow: 0 30px 60px -20px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.8), inset 0 -2px 6px rgba(0,0,0,.12);
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      user-select: none; -webkit-user-select: none;
+    }
+    html.dark-ink .nano-device {
+      --body: linear-gradient(150deg, #3a3a3d 0%, #1d1d1f 60%, #0e0e0f 100%);
+      --wheel: #262628; --wheel-label: #d7d7dc; --center: linear-gradient(160deg, #3b3b3e, #1c1c1e); --wheel-edge: rgba(255,255,255,.06);
+      box-shadow: 0 30px 60px -20px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.12);
+    }
+    .nano-screen { flex: 1 1 auto; min-height: 0; background: #fff; color: #111; border-radius: 8px; border: 3px solid #111; display: flex; flex-direction: column; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+    .nano-bar { flex: 0 0 auto; display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; height: 26px; padding: 0 8px; background: linear-gradient(#fdfdfd, #d5d6db); border-bottom: 1px solid #9a9ba1; font-size: 13px; font-weight: 700; }
+    .nano-bar-title { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nano-play { font-size: 10px; color: #2a72e8; }
+    .nano-battery { justify-self: end; width: 22px; height: 10px; border: 1.5px solid #333; border-radius: 2px; position: relative; padding: 1px; }
+    .nano-battery::after { content: ''; position: absolute; right: -4px; top: 2px; width: 2px; height: 4px; background: #333; border-radius: 0 1px 1px 0; }
+    .nano-battery span { display: block; height: 100%; width: 80%; background: linear-gradient(#8de07a, #3fae2a); }
+    .nano-stage { position: relative; flex: 1 1 auto; overflow: hidden; }
+    .nano-page { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; background: #fff; transition: transform .26s ease; -webkit-overflow-scrolling: touch; }
+    .nano-page.from-right, .nano-page.to-right { transform: translateX(100%); }
+    .nano-page.from-left, .nano-page.to-left { transform: translateX(-100%); }
+    .nano-list { list-style: none; margin: 0; padding: 0; }
+    .nano-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: 16px; line-height: 1.25; cursor: pointer; }
+    .nano-item .nano-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nano-item.two-line .nano-label { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 600; font-size: 15px; }
+    .nano-item .nano-sub { display: block; font-size: 11.5px; color: #6c6d73; margin-top: 2px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nano-item .nano-right { flex: 0 0 auto; font-size: 13px; color: #6c6d73; }
+    .nano-item .nano-chevron { flex: 0 0 auto; font-weight: 700; font-size: 18px; line-height: 1; }
+    .nano-item.is-sel { background: linear-gradient(#64aefc, #1f6fe0); color: #fff; }
+    .nano-item.is-sel .nano-sub, .nano-item.is-sel .nano-right { color: rgba(255,255,255,.85); }
+    .nano-empty { padding: 24px 14px; text-align: center; color: #6c6d73; font-size: 14px; }
+    .nano-article { padding: 10px 12px 28px; font-family: 'Newsreader', Georgia, serif; }
+    .nano-article .meta { font: 600 10.5px/1.4 -apple-system, 'Helvetica Neue', sans-serif; text-transform: uppercase; letter-spacing: .04em; color: #6c6d73; }
+    .nano-article h2 { font-size: 20px; line-height: 1.2; font-weight: 700; margin: 4px 0 8px; }
+    .nano-article .summary { font-style: italic; font-size: 15px; line-height: 1.45; color: #333; border-left: 3px solid #1f6fe0; padding-left: 8px; margin: 8px 0 12px; }
+    .nano-article .body { font-size: 16px; line-height: 1.55; }
+    .nano-article .body p { margin: 0 0 .8em; }
+    .nano-article .body img { max-width: 100%; height: auto; margin: .6em 0; }
+    .nano-article .body a { color: #1f6fe0; text-decoration: underline; }
+    .nano-article .body h2, .nano-article .body h3 { font-size: 17px; font-weight: 700; margin: 1em 0 .4em; }
+    .nano-article .body ul { list-style: disc; padding-left: 1.2em; } .nano-article .body ol { list-style: decimal; padding-left: 1.2em; }
+    .nano-article .body blockquote { border-left: 2px solid #bbb; padding-left: 8px; color: #444; font-style: italic; }
+    .nano-article audio { width: 100%; margin: 6px 0 10px; }
+    .nano-article .orig { display: inline-block; margin-top: 10px; font: 600 12px -apple-system, sans-serif; color: #1f6fe0; }
+    .nano-article .note { font: 12px/1.4 -apple-system, sans-serif; color: #6c6d73; background: #f2f3f5; padding: 6px 8px; border-radius: 4px; margin-top: 8px; }
+    .nano-np { padding: 16px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+    .nano-cover { width: 46%; aspect-ratio: 1; background: #F4F1EA; border: 1px solid #ccc; box-shadow: 0 6px 14px rgba(0,0,0,.25); display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Playfair Display', Georgia, serif; color: #141413; margin-bottom: 6px; }
+    .nano-cover b { font-size: 46px; font-weight: 900; line-height: 1; border-bottom: 3px double #141413; padding: 0 8px 2px; }
+    .nano-cover small { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .15em; margin-top: 6px; }
+    .nano-np .t { font-size: 16px; font-weight: 700; } .nano-np .s { font-size: 12.5px; color: #6c6d73; }
+    .nano-np .bar { width: 100%; height: 8px; border-radius: 4px; background: #e2e3e7; overflow: hidden; margin-top: 8px; box-shadow: inset 0 1px 2px rgba(0,0,0,.15); }
+    .nano-np .bar div { height: 100%; background: linear-gradient(#64aefc, #1f6fe0); transition: width .3s ease; }
+    .nano-np .hint { font-size: 11px; color: #8a8b91; margin-top: 4px; }
+    .nano-wheel-area { flex: 0 0 auto; display: flex; justify-content: center; }
+    .nano-wheel { position: relative; width: min(236px, 64vw, 33dvh); aspect-ratio: 1; border-radius: 50%; background: var(--wheel); touch-action: none; cursor: grab; box-shadow: inset 0 2px 5px rgba(0,0,0,.12), 0 1px 0 var(--wheel-edge, rgba(255,255,255,.7)); }
+    .nano-wheel:active { cursor: grabbing; }
+    .nano-wheel-btn { position: absolute; border: 0; background: none; color: var(--wheel-label); font: 700 13px/1 -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: .04em; padding: 10px; cursor: pointer; }
+    .nano-wheel-btn.top { top: 4%; left: 50%; transform: translateX(-50%); }
+    .nano-wheel-btn.bottom { bottom: 4%; left: 50%; transform: translateX(-50%); font-size: 12px; }
+    .nano-wheel-btn.left { left: 3%; top: 50%; transform: translateY(-50%); font-size: 12px; }
+    .nano-wheel-btn.right { right: 3%; top: 50%; transform: translateY(-50%); font-size: 12px; }
+    .nano-center { position: absolute; inset: 33%; border-radius: 50%; border: 0; background: var(--center); box-shadow: 0 1px 3px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.5); cursor: pointer; }
+    .nano-center:active { filter: brightness(.94); }
+    .nano-wheel button:focus { outline: none; }
+    .nano-wheel button:focus-visible { outline: 2px solid #1f6fe0; outline-offset: 2px; }
+    .nano-help { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-muted); text-align: center; text-transform: uppercase; letter-spacing: .08em; }
+    .nano-help button { text-decoration: underline; color: var(--ink-secondary); text-transform: uppercase; }
+    @media (max-width: 520px) {
+      .nano-wrap { padding: 0; gap: 0; }
+      .nano-device { width: 100%; height: 100vh; height: 100dvh; min-height: 0; border-radius: 0; padding: calc(12px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom)); gap: 16px; }
+      .nano-help { display: none; }
+    }
   </style>
 </head>
 <body class="min-h-screen pb-24 lg:pb-16 selection:bg-[#8F241E] selection:text-white">
 
+<div id="viewPaper">
   <!-- TOP META BAR -->
   <div class="w-full hairline-bottom bg-[var(--paper-elevated)] text-[11px] font-mono-meta">
     <div class="max-w-[1380px] mx-auto px-3 sm:px-6 py-1.5 flex flex-wrap items-center justify-between gap-2">
@@ -104,13 +227,16 @@
       </div>
 
       <div class="flex items-center gap-3 ml-auto">
-        <span id="sync-status" class="text-[#1B4D3E] font-bold">Lade Ausgabe...</span>
+        <span id="sync-status" class="text-[var(--accent-green)] font-bold">Lade Ausgabe...</span>
         <span class="text-[var(--rule-light)]">|</span>
-        <button onclick="toggleOriginalsModal()" class="hover:underline text-[var(--ink-secondary)] hidden sm:inline">Quellen & OPML</button>
+        <button onclick="toggleSourcesModal(true)" class="hover:underline text-[var(--ink-secondary)] hidden sm:inline">Quellen & App</button>
         <span class="text-[var(--rule-light)] hidden sm:inline">|</span>
+        <button onclick="setView('nano')" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition" title="iPod-Menü">
+          <span>◉</span><span>Nano</span>
+        </button>
         <button onclick="toggleDarkInk()" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition">
           <span id="themeIcon">☾</span>
-          <span id="themeLabel">Abenddruck</span>
+          <span id="themeLabel" class="hidden sm:inline">Abenddruck</span>
         </button>
       </div>
     </div>
@@ -121,23 +247,23 @@
     <!-- ZEITUNGSKOPF -->
     <header class="pb-2">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pb-4">
-        
+
         <!-- Linkes Ohr -->
         <div class="lg:col-span-3 order-2 lg:order-1 border border-[var(--rule-light)] p-3 bg-[var(--paper-elevated)]/40 flex lg:flex-col justify-between items-center lg:items-start gap-2">
           <div>
-            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)] font-semibold">Ausgabe Wien • KI Kuratiert</div>
+            <div id="editionBadge" class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)] font-semibold">Ausgabe Wien • KI Kuratiert</div>
             <div class="text-xs text-[var(--ink-secondary)] mt-0.5 leading-snug">Kein Ungelesen-Zähler. Deine wichtigsten Themenpunkte für den Tag.</div>
           </div>
           <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] border-t border-[var(--rule-light)] pt-1.5 w-full hidden lg:flex justify-between">
-            <span>JAHRGANG I</span><span>PREIS: 0,00 €</span>
+            <span id="editionCount">JAHRGANG I</span><span>PREIS: 0,00 €</span>
           </div>
         </div>
 
         <!-- Titel -->
         <div class="lg:col-span-5 order-1 lg:order-2 text-center py-1">
           <div class="font-mono-meta text-[10px] uppercase tracking-[0.25em] text-[var(--ink-muted)] mb-1" id="currentDateDisplay">HEUTE</div>
-          <h1 id="mastheadTitle" class="font-masthead text-5xl sm:text-6xl xl:text-7xl font-black tracking-tight leading-none uppercase select-none">MELANGE</h1>
-          <p id="mastheadSubtitle" class="font-serif-body italic text-sm sm:text-base text-[var(--ink-secondary)] mt-1.5">Wiener Tagesblatt für KI, Klinik, Welt & Hütteldorf</p>
+          <h1 id="mastheadTitle" class="font-masthead text-5xl sm:text-6xl xl:text-7xl font-black tracking-tight leading-none uppercase select-none">MORGENBLATT</h1>
+          <p id="mastheadSubtitle" class="font-serif-body italic text-sm sm:text-base text-[var(--ink-secondary)] mt-1.5">Wiener Privatredaktion • Kuratierte Tagesausgabe</p>
         </div>
 
         <!-- Audio Modul -->
@@ -164,40 +290,18 @@
             </div>
           </div>
           <!-- KAPITEL MARKEN -->
-          <div class="mt-2.5 pt-2 border-t border-[var(--rule-light)] flex items-center justify-between gap-1 overflow-x-auto font-mono-meta text-[10px]">
-            <button onclick="playSpecificChapter(0)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-0">01 Klinik-IT</button>
-            <span class="text-[var(--rule-light)]">·</span>
-            <button onclick="playSpecificChapter(1)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-1">02 KI</button>
-            <span class="text-[var(--rule-light)]">·</span>
-            <button onclick="playSpecificChapter(2)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-2">03 Geopolitik</button>
-            <span class="text-[var(--rule-light)]">·</span>
-            <button onclick="playSpecificChapter(3)" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent" id="chap-3">04 Sport</button>
-          </div>
+          <div id="chapterPills" class="mt-2.5 pt-2 border-t border-[var(--rule-light)] flex items-center gap-1 overflow-x-auto font-mono-meta text-[10px]"></div>
         </div>
       </div>
 
-      <nav class="double-rule-top bold-rule-bottom py-2 flex items-center justify-between overflow-x-auto gap-4 font-mono-meta text-xs uppercase tracking-wider">
-        <div class="flex items-center gap-1 sm:gap-5 shrink-0">
-          <button onclick="setSection('all')" data-sec="all" class="sec-nav-btn font-bold text-[var(--accent-red)] underline underline-offset-4 px-1.5 py-0.5">Titelseite</button>
-          <span class="text-[var(--rule-light)]">/</span>
-          <button onclick="setSection('med-ai')" data-sec="med-ai" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">Klinik-IT</button>
-          <span class="text-[var(--rule-light)]">/</span>
-          <button onclick="setSection('ai')" data-sec="ai" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">KI</button>
-          <span class="text-[var(--rule-light)]">/</span>
-          <button onclick="setSection('geopolitik')" data-sec="geopolitik" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">Geopolitik</button>
-          <span class="text-[var(--rule-light)]">/</span>
-          <button onclick="setSection('rapid')" data-sec="rapid" class="sec-nav-btn hover:text-[var(--accent-green)] px-1.5 py-0.5">SK Rapid</button>
-          <span class="text-[var(--rule-light)]">/</span>
-          <button onclick="setSection('darts')" data-sec="darts" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">Darts</button>
-        </div>
-      </nav>
+      <nav id="sectionNav" class="double-rule-top bold-rule-bottom py-2 flex items-center justify-between overflow-x-auto gap-4 font-mono-meta text-xs uppercase tracking-wider"></nav>
     </header>
 
     <!-- SEITE 1: ABOVE THE FOLD -->
     <section id="frontPageSpread" class="mt-4 pb-8 double-rule-bottom">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- SPALTE LINKS: DAS WICHTIGSTE (3 Kurzmeldungen) -->
+        <!-- SPALTE LINKS: DAS WICHTIGSTE -->
         <aside class="lg:col-span-3 col-rule-right lg:pr-5 flex flex-col justify-between">
           <div>
             <div class="bold-rule-top hairline-bottom py-1 mb-3 flex items-center justify-between">
@@ -209,19 +313,24 @@
           </div>
         </aside>
 
-        <!-- ZENTRUM: DEEP DIVE LEITARTIKEL -->
+        <!-- ZENTRUM: LEITARTIKEL -->
         <main class="lg:col-span-6 col-rule-right lg:pr-5">
           <div class="flex items-center justify-between font-mono-meta text-[11px] uppercase tracking-widest text-[var(--accent-red)] mb-1">
             <span>SCHWERPUNKT • LEITARTIKEL</span>
+            <span id="deep-section" class="text-[var(--ink-muted)]"></span>
           </div>
-          <h2 id="deep-title" class="font-masthead text-3xl sm:text-4xl xl:text-[42px] font-bold leading-[1.08] tracking-tight hover:text-[var(--accent-red)] transition">
+          <h2 id="deep-title" onclick="openLead()" class="font-masthead text-3xl sm:text-4xl xl:text-[42px] font-bold leading-[1.08] tracking-tight hover:text-[var(--accent-red)] transition cursor-pointer">
             Lade Leitartikel...
           </h2>
           <p id="deep-summary" class="font-serif-body italic text-lg sm:text-xl text-[var(--ink-secondary)] mt-2.5 leading-snug">
             Bitte warte kurz...
           </p>
-          <div class="newspaper-columns-2 text-[16px] leading-[1.62] text-[var(--ink-primary)] mt-4">
-            <p id="deep-body" class="drop-cap mb-3">Die Daten fließen direkt in den Browser.</p>
+          <figure id="deep-figure" class="newsprint-graphic mt-4 hidden">
+            <img id="deep-image" alt="" class="newsprint-img w-full max-h-80 object-cover" referrerpolicy="no-referrer">
+            <figcaption id="deep-caption" class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] px-2 py-1"></figcaption>
+          </figure>
+          <div id="deep-body" class="newspaper-columns-2 text-[16px] leading-[1.62] text-[var(--ink-primary)] mt-4">
+            <p class="drop-cap mb-3">Die Daten fließen direkt in den Browser.</p>
           </div>
           <div class="mt-4 pt-3 bold-rule-top bg-[var(--paper-elevated)]/60 p-3">
             <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Redaktions-Notiz (Takeaway)</div>
@@ -229,18 +338,17 @@
               Analyse wird geladen.
             </blockquote>
           </div>
+          <button id="deep-readmore" onclick="openLead()" class="mt-3 font-mono-meta text-[11px] uppercase font-bold underline underline-offset-4 hover:text-[var(--accent-red)]">Ganzen Artikel lesen →</button>
         </main>
 
-        <!-- SPALTE RECHTS: SPORT & WELT -->
+        <!-- SPALTE RECHTS: TELEGRAMM -->
         <aside class="lg:col-span-3 flex flex-col justify-between gap-6">
-          <div class="border-2 border-[var(--rule-heavy)] p-3.5 bg-[var(--paper-elevated)]/50">
+          <div id="telegramBox" class="border-2 border-[var(--rule-heavy)] p-3.5 bg-[var(--paper-elevated)]/50">
             <div class="flex items-center justify-between border-b border-[var(--rule-heavy)] pb-1.5 mb-3">
-              <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Sport-Telegramm</span>
-              <span class="font-mono-meta text-[10px] uppercase text-[var(--accent-green)] font-bold">Hütteldorf & PDC</span>
+              <span id="telegramTitle" class="font-mono-meta text-xs font-bold uppercase tracking-widest">Sport-Telegramm</span>
+              <span id="telegramSubtitle" class="font-mono-meta text-[10px] uppercase text-[var(--accent-green)] font-bold"></span>
             </div>
-            <div id="rightSidebarContent" class="space-y-4">
-              <!-- Dynamischer Sport-Inhalt -->
-            </div>
+            <div id="rightSidebarContent" class="space-y-4"></div>
           </div>
         </aside>
 
@@ -252,15 +360,15 @@
       <!-- Suchleiste -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 bold-rule-bottom mb-6">
         <div>
-          <span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">RESSORT-ÜBERSICHT & EINZELMELDUNGEN</span>
+          <span id="activeSectionKicker" class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">RESSORT-ÜBERSICHT & EINZELMELDUNGEN</span>
           <h2 id="activeSectionHeading" class="font-masthead text-2xl sm:text-3xl font-bold">Alle Ressorts der Ausgabe</h2>
         </div>
         <div class="flex items-center gap-2">
-          <input type="text" id="keywordSearchInput" oninput="filterArticlesByKeyword(this.value)" placeholder="Suchen (z.B. KIS, Rapid)..." class="bg-[var(--paper-elevated)] border border-[var(--rule-heavy)] px-3 py-1.5 text-xs font-mono-meta w-60 sm:w-64 focus:outline-none">
+          <input type="search" id="keywordSearchInput" oninput="filterArticlesByKeyword(this.value)" placeholder="Suchen (z.B. KIS, Rapid)..." class="bg-[var(--paper-elevated)] border border-[var(--rule-heavy)] px-3 py-1.5 text-xs font-mono-meta w-60 sm:w-64 focus:outline-none">
           <button onclick="resetFilters()" class="font-mono-meta text-[11px] uppercase px-2.5 py-1.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)]">Reset</button>
         </div>
       </div>
-      <div id="newspaperArticlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6">
+      <div id="newspaperArticles">
         <!-- Dynamisches Raster -->
       </div>
     </section>
@@ -270,16 +378,16 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-8 hairline-bottom text-xs text-[var(--ink-secondary)]">
         <div>
           <div class="font-masthead font-bold text-base text-[var(--ink-primary)] uppercase" id="footerPaperTitle">MORGENBLATT</div>
-          <p class="mt-1 leading-relaxed">Automatisch generierte, KI-kuratierte Tagesausgabe für Medizin-IT, KI, Geopolitik, Rapid & Darts.</p>
+          <p class="mt-1 leading-relaxed">Automatisch generierte, KI-kuratierte Tagesausgabe aus frei gewählten RSS-Feeds.</p>
         </div>
         <div>
           <div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold text-[var(--ink-primary)]">Verbundene Systeme</div>
-          <p class="mt-1 font-mono-meta text-[11px] leading-relaxed text-[var(--ink-muted)]">GitHub Actions • Gemini-3-Flash JSON API • Tailwind CSS • RSS Parsing Pipeline</p>
+          <p class="mt-1 font-mono-meta text-[11px] leading-relaxed text-[var(--ink-muted)]">GitHub Actions • Gemini JSON API • RSS-Volltext-Pipeline • Offline-fähig (PWA)</p>
         </div>
         <div class="md:text-right flex flex-col justify-between">
           <div>
             <span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Auslieferung</span>
-            <p class="mt-1">Statisch via GitHub Pages.</p>
+            <p class="mt-1">Statisch via GitHub Pages. <button onclick="toggleSourcesModal(true)" class="underline">Quellen & App</button></p>
           </div>
           <div class="mt-3">
             <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="font-mono-meta text-[11px] uppercase underline hover:text-[var(--accent-red)]">↑ Zurück zur Titelseite</button>
@@ -293,268 +401,914 @@
     </footer>
 
   </div>
+</div>
 
   <!-- MOBILE BOTTOM NAV -->
-  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--paper-elevated)] border-t-2 border-[var(--rule-heavy)] px-2 py-1.5 shadow-2xl">
-    <div class="flex items-center justify-around font-mono-meta text-[10px] uppercase">
-      <button onclick="setSection('all')" data-mob-sec="all" class="mob-nav-btn flex flex-col items-center py-1 px-2 font-bold text-[var(--accent-red)]"><span class="text-sm">📰</span><span>Seite 1</span></button>
-      <button onclick="setSection('med-ai')" data-mob-sec="med-ai" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🏥</span><span>Klinik-IT</span></button>
-      <button onclick="setSection('ai')" data-mob-sec="ai" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🤖</span><span>AI</span></button>
-      <button onclick="setSection('geopolitik')" data-mob-sec="geopolitik" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🌍</span><span>Welt</span></button>
-      <button onclick="setSection('rapid')" data-mob-sec="rapid" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">⚽</span><span>Rapid</span></button>
-      <button onclick="setSection('darts')" data-mob-sec="darts" class="mob-nav-btn flex flex-col items-center py-1 px-2 text-[var(--ink-secondary)]"><span class="text-sm">🎯</span><span>Darts</span></button>
-    </div>
+  <nav id="mobileNav" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--paper-elevated)] border-t-2 border-[var(--rule-heavy)] px-2 pt-1.5 shadow-2xl" style="padding-bottom: calc(0.375rem + env(safe-area-inset-bottom))">
+    <div id="mobileNavItems" class="flex items-center justify-around overflow-x-auto font-mono-meta text-[10px] uppercase"></div>
   </nav>
 
+  <!-- NANO-MODUS -->
+  <div id="viewNano" class="nano-wrap">
+    <div class="nano-device" id="nanoDevice">
+      <div class="nano-screen">
+        <div class="nano-bar">
+          <span class="nano-play" id="nanoPlayIndicator"></span>
+          <span class="nano-bar-title" id="nanoTitle">Morgenblatt</span>
+          <span class="nano-battery"><span></span></span>
+        </div>
+        <div class="nano-stage" id="nanoStage"><div class="nano-empty">Lade Ausgabe …</div></div>
+      </div>
+      <div class="nano-wheel-area">
+        <div class="nano-wheel" id="nanoWheel" aria-label="Click Wheel">
+          <button class="nano-wheel-btn top" data-act="menu" aria-label="Menü / zurück">MENU</button>
+          <button class="nano-wheel-btn left" data-act="prev" aria-label="Zurück">◀◀</button>
+          <button class="nano-wheel-btn right" data-act="next" aria-label="Weiter">▶▶</button>
+          <button class="nano-wheel-btn bottom" data-act="play" aria-label="Abspielen / Pause">▶❙❙</button>
+          <button class="nano-center" id="nanoCenter" aria-label="Auswählen"></button>
+        </div>
+      </div>
+    </div>
+    <div class="nano-help">Rad drehen = blättern · Mitte = auswählen · Menu = zurück · ↑↓ ↵ Esc · <button onclick="setView('paper')">Zeitungsansicht</button></div>
+  </div>
+
   <!-- LESE-MODAL -->
-  <div id="readerModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs overflow-y-auto p-2 sm:p-6">
-    <div class="max-w-3xl mx-auto bg-[var(--paper-bg)] border-2 border-[var(--rule-heavy)] p-5 sm:p-10 my-4 relative shadow-2xl">
-      <div class="flex items-center justify-between pb-3 double-rule-bottom mb-6">
-        <div class="font-mono-meta text-xs uppercase tracking-widest text-[var(--accent-red)] font-bold" id="modalCategory">RESSORT</div>
-        <button onclick="closeReaderModal()" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕ Schließen</button>
+  <div id="readerModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs overflow-y-auto p-2 sm:p-6" onclick="if (event.target === this) closeReader()">
+    <article class="max-w-3xl mx-auto bg-[var(--paper-bg)] border-2 border-[var(--rule-heavy)] p-5 sm:p-10 my-4 relative shadow-2xl">
+      <div class="flex items-center justify-between gap-2 pb-3 double-rule-bottom mb-6">
+        <div class="font-mono-meta text-xs uppercase tracking-widest text-[var(--accent-red)] font-bold truncate" id="modalCategory">RESSORT</div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="modalPrev" onclick="stepReader(-1)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] disabled:opacity-30" title="Vorheriger Artikel (←)">←</button>
+          <button id="modalNext" onclick="stepReader(1)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] disabled:opacity-30" title="Nächster Artikel (→)">→</button>
+          <button onclick="closeReader()" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕ <span class="hidden sm:inline">Schließen</span></button>
+        </div>
       </div>
       <div class="font-mono-meta text-[11px] text-[var(--ink-muted)] uppercase mb-2" id="modalMeta">QUELLE</div>
-      <h2 id="modalTitle" class="font-masthead text-2xl sm:text-4xl font-bold leading-tight mb-4">Artikeltitel</h2>
-      <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)] p-4 my-5">
+      <h2 id="modalTitle" class="font-masthead text-2xl sm:text-4xl font-bold leading-tight mb-2">Artikeltitel</h2>
+      <div id="modalOriginalTitle" class="font-serif-body italic text-sm text-[var(--ink-muted)] mb-4 hidden"></div>
+      <div id="modalSummaryBox" class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)] p-4 my-5">
         <div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold text-[var(--accent-red)] mb-2">Redaktionelle Zusammenfassung (Key Takeaways)</div>
-        <ul id="modalBullets" class="list-disc list-inside space-y-1.5 text-sm font-serif-body text-[var(--ink-primary)]"></ul>
+        <p id="modalSummary" class="text-[15px] font-serif-body text-[var(--ink-primary)] leading-relaxed"></p>
+        <p id="modalTakeaway" class="text-sm font-serif-body italic text-[var(--ink-secondary)] mt-2 pt-2 hairline-top"></p>
       </div>
-      <div id="modalBody" class="font-serif-body text-lg leading-relaxed space-y-4 text-[var(--ink-primary)]"></div>
+      <div id="modalAudio" class="my-4"></div>
+      <figure id="modalFigure" class="my-5"></figure>
+      <div id="modalBody" class="article-body font-serif-body text-lg leading-relaxed text-[var(--ink-primary)]"></div>
+      <div id="modalTeaserNote" class="mt-6 p-3 border border-dashed border-[var(--rule-light)] font-mono-meta text-[11px] text-[var(--ink-muted)] hidden">
+        Der Feed liefert nur einen Auszug und die Seite ließ sich nicht automatisch laden. Den ganzen Text gibt's beim Original.
+      </div>
       <div class="mt-8 pt-4 bold-rule-top flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <a id="modalExternalLink" href="#" target="_blank" rel="noopener" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Originalartikel auf der Quell-Website öffnen ↗</a>
+        <a id="modalExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Originalartikel auf der Quell-Website öffnen ↗</a>
+        <button onclick="closeReader()" class="font-mono-meta text-[11px] uppercase underline text-[var(--ink-secondary)]">Zurück zur Zeitung</button>
+      </div>
+    </article>
+  </div>
+
+  <!-- QUELLEN-MODAL -->
+  <div id="sourcesModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs overflow-y-auto p-2 sm:p-6" onclick="if (event.target === this) toggleSourcesModal(false)">
+    <div class="max-w-2xl mx-auto bg-[var(--paper-bg)] border-2 border-[var(--rule-heavy)] p-5 sm:p-8 my-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 double-rule-bottom mb-5">
+        <div class="font-masthead text-2xl font-bold">Quellen & App</div>
+        <button onclick="toggleSourcesModal(false)" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕</button>
+      </div>
+      <div id="sourcesList" class="space-y-5 text-sm"></div>
+      <div class="mt-6 pt-4 bold-rule-top space-y-2 font-serif-body text-sm text-[var(--ink-secondary)]">
+        <p><a href="feeds.opml" download class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">feeds.opml herunterladen ↓</a> – zum Import in jeden anderen Reader.</p>
+        <p>Feeds ändern: <code class="font-mono-meta text-xs">feeds.json</code> im Repository bearbeiten, die nächste Ausgabe übernimmt sie.</p>
+        <p><b>Als App:</b> iPhone – Safari → Teilen → „Zum Home-Bildschirm“. Android/Chrome – Menü → „App installieren“. <button id="installBtn" onclick="installApp()" class="hidden underline font-bold text-[var(--accent-red)]">Jetzt installieren</button></p>
+        <p>Die ganze Ausgabe wird beim Öffnen gespeichert und ist danach auch offline lesbar – etwa in der U-Bahn.</p>
       </div>
     </div>
   </div>
 
   <script>
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('de-DE', options).toUpperCase();
+    const $ = sel => document.querySelector(sel);
+    const store = {
+      get(key, fallback) { try { return localStorage.getItem(key) ?? fallback; } catch (e) { return fallback; } },
+      set(key, value) { try { localStorage.setItem(key, value); } catch (e) {} },
+    };
+    const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
+    let edition = null;
     let articles = [];
+    let byId = {};
+    let sections = [];
+    let sectionById = {};
     let currentSection = 'all';
-    let BRIEFING_CHAPTERS = [];
-    let isPlayingAudio = false;
-    let currentChapterIndex = 0;
-    let speechRate = 1.0;
-    let progressInterval = null;
+    let readerId = null;
+    let readerPushed = false;
 
-    // Helper für Sidebar-Artikel (Original-Klassen!)
-    function renderSmallArticle(art, isSport = false) {
-      const catColor = art.catKey === 'rapid' ? 'text-[var(--accent-green)]' : (isSport ? 'text-[var(--accent-red)]' : 'text-[var(--ink-muted)]');
+    // ───────── Helfer ─────────
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+    const shorten = (s, n) => (s && s.length > n) ? s.slice(0, n).replace(/\s+\S*$/, '') + ' …' : (s || '');
+    const sectionLabel = sec => sec ? `${ROMAN[sections.indexOf(sec)] || ''}. ${sec.name}` : '';
+    const pageOf = sec => sections.indexOf(sec) + 2;
+    const accentOf = sec => sec && sec.color === 'gruen' ? 'var(--accent-green)' : 'var(--accent-red)';
+    const byDate = (a, b) => (b.published || '').localeCompare(a.published || '');
+
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const hours = (Date.now() - new Date(iso)) / 36e5;
+      if (hours < 1) return 'gerade eben';
+      if (hours < 24) return `vor ${Math.round(hours)} Std.`;
+      const days = Math.round(hours / 24);
+      return days === 1 ? 'gestern' : `vor ${days} Tagen`;
+    }
+    function fmtDateTime(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleString('de-AT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+    // Bilder aus fremden Feeds: ohne Referrer laden, kaputte still entfernen
+    function fixMedia(root) {
+      root.querySelectorAll('img').forEach(img => {
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => img.remove();
+      });
+    }
+
+    // ───────── Ausgabe laden ─────────
+    fetch('edition.json', { cache: 'no-store' })
+      .then(res => res.json())
+      .then(initEdition)
+      .catch(err => {
+        console.error(err);
+        $('#sync-status').innerText = 'Ladefehler';
+        $('#sync-status').className = 'text-red-700 font-bold';
+      });
+
+    function initEdition(data) {
+      edition = data;
+      sections = data.sections || [];
+      sectionById = Object.fromEntries(sections.map(s => [s.id, s]));
+      articles = (data.articles || []).filter(a => sectionById[a.section]);
+      byId = Object.fromEntries(articles.map(a => [a.id, a]));
+
+      // Kopfzeile: Datum & Stand der Ausgabe
+      const created = new Date(data.generated_at);
+      const ageHours = (Date.now() - created) / 36e5;
+      $('#currentDateDisplay').innerText = created.toLocaleDateString('de-AT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
+      const status = $('#sync-status');
+      status.innerText = ageHours > 26 ? `Ausgabe von ${timeAgo(data.generated_at)}` : `Ausgabe ${created.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })} ✓`;
+      if (ageHours > 26) status.className = 'text-[var(--accent-red)] font-bold';
+      $('#editionBadge').innerText = data.ai ? 'Ausgabe Wien • KI Kuratiert' : 'Ausgabe Wien • ohne KI-Redaktion';
+      $('#editionCount').innerText = `${articles.length} MELDUNGEN`;
+
+      applyPaperName(store.get('paperName', $('#paperNameSelect').options[0].value));
+      renderNav();
+      renderFrontPage();
+      renderArticles();
+      renderChapterPills();
+      renderSources();
+      if (document.documentElement.dataset.view === 'nano') nanoStart();
+
+      const match = location.hash.match(/^#a=([\w-]+)/);
+      if (match && byId[match[1]]) openReader(match[1], 'replace');
+    }
+
+    // ───────── Navigation (Ressorts) ─────────
+    function renderNav() {
+      const items = [{ id: 'all', name: 'Titelseite', short: 'Seite 1', icon: '📰' }, ...sections];
+      $('#sectionNav').innerHTML = `<div class="flex items-center gap-1 sm:gap-5 shrink-0">` + items.map((s, i) => `
+        ${i ? '<span class="text-[var(--rule-light)]">/</span>' : ''}
+        <button onclick="setSection('${s.id}')" data-sec="${s.id}" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">${esc(s.id === 'all' ? s.name : s.short)}</button>`).join('') + `</div>`;
+      $('#mobileNavItems').innerHTML = items.map(s => `
+        <button onclick="setSection('${s.id}')" data-mob-sec="${s.id}" class="mob-nav-btn flex flex-col items-center py-1 px-2 min-w-[56px] text-[var(--ink-secondary)]"><span class="text-sm">${s.icon}</span><span class="whitespace-nowrap">${esc(s.short)}</span></button>`).join('');
+      markActiveSection();
+    }
+
+    function markActiveSection() {
+      document.querySelectorAll('.sec-nav-btn').forEach(btn => {
+        btn.dataset.sec === currentSection ? btn.classList.add('font-bold', 'text-[var(--accent-red)]', 'underline', 'underline-offset-4') : btn.classList.remove('font-bold', 'text-[var(--accent-red)]', 'underline', 'underline-offset-4');
+      });
+      document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+        btn.dataset.mobSec === currentSection ? btn.classList.add('font-bold', 'text-[var(--accent-red)]') : btn.classList.remove('font-bold', 'text-[var(--accent-red)]');
+      });
+    }
+
+    function setSection(sec) {
+      currentSection = sec;
+      $('#keywordSearchInput').value = '';
+      $('#frontPageSpread').classList.toggle('hidden', sec !== 'all');
+      renderArticles();
+      markActiveSection();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ───────── Titelseite ─────────
+    // Helper für Sidebar-Artikel
+    function renderSmallArticle(art, isTelegram = false) {
+      const sec = sectionById[art.section];
+      const color = isTelegram || sec.color ? accentOf(sec) : 'var(--ink-muted)';
       return `
-        <div class="pb-3 hairline-bottom cursor-pointer group" onclick="openReaderModal('${art.id}')">
-          <div class="font-mono-meta text-[10px] uppercase tracking-wider ${catColor} font-semibold">${art.categoryLabel}</div>
-          <h3 class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${art.title}</h3>
-          <p class="text-sm text-[var(--ink-secondary)] mt-1 leading-relaxed">${art.summary.substring(0, 100)}... <span class="font-mono-meta text-[10px] uppercase">→ S. X</span></p>
+        <div class="pb-3 hairline-bottom cursor-pointer group" onclick="openReader('${art.id}')">
+          <div class="font-mono-meta text-[10px] uppercase tracking-wider font-semibold" style="color:${color}">${esc(sectionLabel(sec))}</div>
+          <h3 class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${esc(art.headline)}</h3>
+          <p class="text-sm text-[var(--ink-secondary)] mt-1 leading-relaxed">${esc(shorten(art.summary, 110))} <span class="font-mono-meta text-[10px] uppercase whitespace-nowrap">→ S. ${pageOf(sec)}</span></p>
         </div>
       `;
     }
 
-    // JSON LADEN
-    fetch('edition.json?t=' + new Date().getTime())
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('sync-status').innerText = 'Ausgabe aktuell ✓';
+    function renderFrontPage() {
+      const top = (edition.top || []).map(id => byId[id]).filter(Boolean);
+      $('#leftSidebarContent').innerHTML = top.map(a => renderSmallArticle(a)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Kurzmeldungen.</div>';
 
-        // 1. Deep Dive
-        if(data.deep_dive) {
-          document.getElementById('deep-title').innerText = data.deep_dive.title || '';
-          document.getElementById('deep-summary').innerText = data.deep_dive.summary || '';
-          document.getElementById('deep-body').innerText = data.deep_dive.summary || '';
-          document.getElementById('deep-takeaway').innerText = data.deep_dive.takeaway || '';
-        }
+      // Leitartikel
+      const lead = edition.lead || {};
+      const leadArt = byId[lead.article];
+      $('#deep-title').innerText = lead.headline || '';
+      $('#deep-summary').innerText = lead.subline || '';
+      $('#deep-body').innerHTML = (lead.text || '').split(/\n\s*\n/).filter(Boolean)
+        .map((p, i) => `<p class="${i === 0 ? 'drop-cap ' : ''}mb-3">${esc(p)}</p>`).join('');
+      $('#deep-takeaway').innerText = lead.takeaway || leadArt?.takeaway || '—';
+      $('#deep-section').innerText = leadArt ? `${leadArt.source} · ${sectionById[leadArt.section].short}` : '';
+      $('#deep-readmore').classList.toggle('hidden', !leadArt);
+      if (leadArt) $('#deep-readmore').innerText = `Ganzen Artikel lesen (${leadArt.reading_minutes} Min.) →`;
+      const img = leadArt && safeUrl(leadArt.image);
+      $('#deep-figure').classList.toggle('hidden', !img);
+      if (img) {
+        $('#deep-image').src = img;
+        $('#deep-image').onerror = () => $('#deep-figure').classList.add('hidden');
+        $('#deep-caption').innerText = `Bild: ${leadArt.source}`;
+      }
 
-        // 2. Artikel in Liste konvertieren
-        const catMap = [
-          { key: 'med_ai', id: 'med-ai', label: 'I. Klinik-IT' },
-          { key: 'ai', id: 'ai', label: 'II. Künstliche Intelligenz' },
-          { key: 'geopolitik', id: 'geopolitik', label: 'III. Geopolitik & Sicherheit' },
-          { key: 'rapid', id: 'rapid', label: 'IV. SK Rapid' },
-          { key: 'darts', id: 'darts', label: 'V. Darts' }
-        ];
-
-        catMap.forEach(cat => {
-          if(data[cat.key]) {
-            data[cat.key].forEach((art, idx) => {
-              articles.push({
-                id: cat.id + '-' + idx,
-                catKey: cat.id,
-                categoryLabel: cat.label,
-                source: art.source || 'Redaktion',
-                title: art.title,
-                summary: art.summary,
-                takeaway: art.takeaway || '',
-                url: art.link || '#'
-              });
-            });
-          }
-        });
-
-        // 3. Sidebars befüllen
-        let leftSidebarHtml = '';
-        let rightSidebarHtml = '';
-        let leftAdded = 0; let rightAdded = 0;
-
-        articles.forEach(art => {
-          if (leftAdded < 3 && ['med-ai', 'ai', 'geopolitik'].includes(art.catKey)) {
-            leftSidebarHtml += renderSmallArticle(art, false); leftAdded++;
-          } else if (rightAdded < 2 && ['rapid', 'darts'].includes(art.catKey)) {
-            rightSidebarHtml += renderSmallArticle(art, true); rightAdded++;
-          }
-        });
-
-        document.getElementById('leftSidebarContent').innerHTML = leftSidebarHtml || 'Keine Kurzmeldungen.';
-        document.getElementById('rightSidebarContent').innerHTML = rightSidebarHtml || 'Keine Sport-Updates.';
-        
-        // Raster bauen
-        renderArticlesGrid(articles);
-
-        // 4. Audio-Skript (Podcast) befüllen
-        BRIEFING_CHAPTERS = [
-          { title: 'Klinik-IT', text: data.med_ai?.[0] ? `Schwerpunkt Klinik-IT: ${data.med_ai[0].summary}` : 'Keine Updates zur Klinik-IT.' },
-          { title: 'KI & Agenten', text: data.ai?.[0] ? `Künstliche Intelligenz: ${data.ai[0].summary}` : 'Keine Updates zur KI.' },
-          { title: 'Geopolitik', text: data.geopolitik?.[0] ? `Geopolitik: ${data.geopolitik[0].summary}` : 'Keine Updates zur Weltpolitik.' },
-          { title: 'Sport', text: (data.rapid?.[0] ? `Rapid: ${data.rapid[0].summary} ` : '') + (data.darts?.[0] ? `Darts: ${data.darts[0].summary}` : '') }
-        ];
-      })
-      .catch(err => {
-        document.getElementById('sync-status').innerText = 'Ladefehler';
-        document.getElementById('sync-status').className = 'text-red-700 font-bold';
-      });
-
-    function renderArticlesGrid(list) {
-      const grid = document.getElementById('newspaperArticlesGrid');
-      if (!list.length) { grid.innerHTML = `<div class="col-span-full py-12 text-center text-[var(--ink-muted)]">Keine Artikel gefunden.</div>`; return; }
-
-      grid.innerHTML = list.map((art, idx) => {
-        const hasRightRule = (idx % 4 !== 3) ? 'lg:border-r lg:border-[var(--rule-light)] lg:pr-5' : '';
-        const catColor = art.catKey === 'rapid' ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]';
-        return `
-          <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] ${hasRightRule} group cursor-pointer" onclick="openReaderModal('${art.id}')">
-            <div>
-              <div class="font-mono-meta text-[10px] uppercase tracking-wider mb-1.5 ${catColor} font-bold">${art.categoryLabel}</div>
-              <h3 class="font-masthead text-xl font-bold leading-snug group-hover:underline text-[var(--ink-primary)]">${art.title}</h3>
-              <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${art.summary}</p>
-            </div>
-            <div class="mt-4 pt-2 hairline-top flex items-center justify-between font-mono-meta text-[10px] text-[var(--ink-muted)]">
-              <span class="truncate max-w-[70%]">${art.source}</span>
-              <span class="uppercase font-semibold text-[var(--ink-primary)] group-hover:text-[var(--accent-red)]">Lesen →</span>
-            </div>
-          </article>
-        `;
-      }).join('');
+      // Telegramm (z. B. Sport): die zwei neuesten Meldungen je Telegramm-Ressort
+      const telegramSections = sections.filter(s => s.telegram);
+      $('#telegramBox').classList.toggle('hidden', !telegramSections.length);
+      $('#telegramTitle').innerText = edition.telegram?.titel || 'Telegramm';
+      $('#telegramSubtitle').innerText = edition.telegram?.unterzeile || telegramSections.map(s => s.short).join(' & ');
+      $('#rightSidebarContent').innerHTML = telegramSections
+        .flatMap(s => articles.filter(a => a.section === s.id).slice(0, 2))
+        .map(a => renderSmallArticle(a, true)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Meldungen.</div>';
     }
 
-    // Navigation (Ressorts)
-    function setSection(sec) {
-      currentSection = sec;
-      const frontSpread = document.getElementById('frontPageSpread');
-      if (sec === 'all') {
-        frontSpread.classList.remove('hidden');
-        renderArticlesGrid(articles);
-      } else {
-        frontSpread.classList.add('hidden');
-        renderArticlesGrid(articles.filter(a => a.catKey === sec));
+    function openLead() {
+      if (edition?.lead?.article) openReader(edition.lead.article);
+    }
+
+    // ───────── Artikel-Raster ─────────
+    function renderCard(art, opts = {}) {
+      const sec = sectionById[art.section];
+      const img = opts.big && safeUrl(art.image);
+      const meta = [art.source, timeAgo(art.published)].filter(Boolean).join(' · ');
+      return `
+        <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] ${opts.ruleRight ? 'lg:border-r lg:border-[var(--rule-light)] lg:pr-5' : ''} ${opts.big ? 'md:col-span-2' : ''} group cursor-pointer" onclick="openReader('${art.id}')">
+          <div>
+            ${img ? `<div class="newsprint-graphic mb-3 overflow-hidden"><img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()" class="newsprint-img w-full h-52 object-cover"></div>` : ''}
+            <div class="font-mono-meta text-[10px] uppercase tracking-wider mb-1.5 font-bold" style="color:${accentOf(sec)}">${esc(opts.showSection ? sectionLabel(sec) : sec.short)}${art.audio ? ' · 🎧 Folge' : ''}</div>
+            <h3 class="font-masthead ${opts.big ? 'text-2xl sm:text-[28px]' : 'text-xl'} font-bold leading-snug group-hover:underline text-[var(--ink-primary)]">${esc(art.headline)}</h3>
+            <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${esc(art.summary)}</p>
+          </div>
+          <div class="mt-4 pt-2 hairline-top flex items-center justify-between gap-2 font-mono-meta text-[10px] text-[var(--ink-muted)]">
+            <span class="truncate">${esc(meta)}</span>
+            <span class="uppercase font-semibold whitespace-nowrap text-[var(--ink-primary)] group-hover:text-[var(--accent-red)]">${art.full_text ? `${art.reading_minutes} Min. →` : 'Lesen →'}</span>
+          </div>
+        </article>
+      `;
+    }
+
+    // Raster mit Spaltenlinien – der erste Artikel eines Ressorts wird groß aufgemacht
+    function renderGrid(list, opts = {}) {
+      let col = 0;
+      return `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6">` + list.map((art, idx) => {
+        const big = opts.feature && idx === 0;
+        col += big ? 2 : 1;
+        return renderCard(art, { big, ruleRight: col % 4 !== 0, showSection: opts.showSection });
+      }).join('') + `</div>`;
+    }
+
+    function renderArticles(query = '') {
+      const target = $('#newspaperArticles');
+      const q = query.trim().toLowerCase();
+      if (q) {
+        const hits = articles.filter(a => [a.headline, a.title, a.summary, a.source].join(' ').toLowerCase().includes(q));
+        $('#activeSectionKicker').innerText = 'SUCHE';
+        $('#activeSectionHeading').innerText = `${hits.length} Treffer für „${query.trim()}“`;
+        target.innerHTML = hits.length ? renderGrid(hits, { showSection: true }) : `<div class="py-12 text-center text-[var(--ink-muted)]">Keine Artikel gefunden.</div>`;
+        return;
       }
-      
-      document.querySelectorAll('.sec-nav-btn').forEach(btn => {
-        btn.dataset.sec === sec ? btn.classList.add('font-bold', 'text-[var(--accent-red)]', 'underline') : btn.classList.remove('font-bold', 'text-[var(--accent-red)]', 'underline');
-      });
-      document.querySelectorAll('.mob-nav-btn').forEach(btn => {
-        btn.dataset.mobSec === sec ? btn.classList.add('font-bold', 'text-[var(--accent-red)]') : btn.classList.remove('font-bold', 'text-[var(--accent-red)]');
-      });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (currentSection === 'all') {
+        $('#activeSectionKicker').innerText = 'RESSORT-ÜBERSICHT & EINZELMELDUNGEN';
+        $('#activeSectionHeading').innerText = 'Alle Ressorts der Ausgabe';
+        target.innerHTML = sections.map(sec => {
+          const list = articles.filter(a => a.section === sec.id);
+          if (!list.length) return '';
+          return `
+            <section class="mb-12">
+              <div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-5 cursor-pointer" onclick="setSection('${sec.id}')">
+                <h3 class="font-masthead text-2xl font-bold hover:text-[var(--accent-red)]">${esc(sectionLabel(sec))}</h3>
+                <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] whitespace-nowrap">S. ${pageOf(sec)} · ${list.length} Meldungen →</span>
+              </div>
+              ${renderGrid(list.slice(0, 7), { feature: true })}
+            </section>`;
+        }).join('');
+        return;
+      }
+      const sec = sectionById[currentSection];
+      const list = articles.filter(a => a.section === sec.id);
+      $('#activeSectionKicker').innerText = `SEITE ${pageOf(sec)} · ${list.length} MELDUNGEN`;
+      $('#activeSectionHeading').innerText = sectionLabel(sec);
+      target.innerHTML = list.length ? renderGrid(list, { feature: true }) : `<div class="py-12 text-center text-[var(--ink-muted)]">Heute nichts Neues in diesem Ressort.</div>`;
     }
 
     // Suche
     function filterArticlesByKeyword(query) {
-      const q = query.trim().toLowerCase();
-      if (!q) return setSection(currentSection);
-      renderArticlesGrid(articles.filter(a => a.title.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q)));
+      if (query.trim() && currentSection === 'all') $('#frontPageSpread').classList.add('hidden');
+      if (!query.trim()) $('#frontPageSpread').classList.toggle('hidden', currentSection !== 'all');
+      renderArticles(query);
     }
-    function resetFilters() { document.getElementById('keywordSearchInput').value = ''; setSection('all'); }
+    function resetFilters() { setSection('all'); }
 
-    // Modals
-    function openReaderModal(id) {
-      const art = articles.find(a => a.id === id);
-      if(!art) return;
-      document.getElementById('modalCategory').textContent = art.categoryLabel;
-      document.getElementById('modalMeta').textContent = art.source;
-      document.getElementById('modalTitle').textContent = art.title;
-      document.getElementById('modalBullets').innerHTML = `<li>${art.takeaway}</li>`;
-      document.getElementById('modalBody').innerHTML = `<p class="drop-cap">${art.summary}</p>`;
-      document.getElementById('modalExternalLink').href = art.url;
-      document.getElementById('readerModal').classList.remove('hidden');
+    // ───────── Lesemodus ─────────
+    function openReader(id, mode = 'push') {
+      const art = byId[id];
+      if (!art) return;
+      renderReader(art);
+      if (mode === 'push') { history.pushState({ reader: id }, '', '#a=' + id); readerPushed = true; }
+      else history.replaceState({ reader: id }, '', '#a=' + id);
+    }
+
+    function renderReader(art) {
+      readerId = art.id;
+      const sec = sectionById[art.section];
+      $('#modalCategory').textContent = sectionLabel(sec);
+      $('#modalMeta').textContent = [art.source, fmtDateTime(art.published), art.author, `${art.reading_minutes} Min. Lesezeit`].filter(Boolean).join(' · ');
+      $('#modalTitle').textContent = art.headline;
+      const differs = art.title && art.title !== art.headline;
+      $('#modalOriginalTitle').textContent = differs ? `Original: ${art.title}` : '';
+      $('#modalOriginalTitle').classList.toggle('hidden', !differs);
+
+      $('#modalSummaryBox').classList.toggle('hidden', !art.takeaway);
+      $('#modalSummary').textContent = art.summary;
+      $('#modalTakeaway').textContent = art.takeaway;
+
+      const audio = safeUrl(art.audio);
+      $('#modalAudio').innerHTML = audio ? `<audio controls preload="none" src="${esc(audio)}" class="w-full"></audio>` : '';
+      const img = safeUrl(art.image);
+      const showImg = img && !(art.content_html || '').includes(img);
+      $('#modalFigure').innerHTML = showImg ? `<img src="${esc(img)}" alt="" class="newsprint-img w-full max-h-96 object-cover border border-[var(--rule-light)]">` : '';
+
+      const body = $('#modalBody');
+      body.innerHTML = art.content_html || `<p>${esc(art.summary)}</p>`;   // serverseitig mit nh3 bereinigt
+      fixMedia(body);
+      fixMedia($('#modalFigure'));
+      $('#modalTeaserNote').classList.toggle('hidden', !!art.full_text);
+      $('#modalExternalLink').href = safeUrl(art.link) || '#';
+
+      const list = articles.filter(a => a.section === art.section);
+      const idx = list.indexOf(art);
+      $('#modalPrev').disabled = idx <= 0;
+      $('#modalNext').disabled = idx >= list.length - 1;
+
+      $('#readerModal').classList.remove('hidden');
+      $('#readerModal').scrollTop = 0;
       document.body.style.overflow = 'hidden';
     }
-    function closeReaderModal() {
-      document.getElementById('readerModal').classList.add('hidden'); document.body.style.overflow = '';
+
+    function stepReader(dir) {
+      const art = byId[readerId];
+      if (!art) return;
+      const list = articles.filter(a => a.section === art.section);
+      const next = list[list.indexOf(art) + dir];
+      if (next) openReader(next.id, 'replace');
     }
 
-    // Audio Player mit Kapitel-Logik
+    function hideReader() {
+      readerId = null;
+      $('#readerModal').classList.add('hidden');
+      $('#modalAudio').innerHTML = '';
+      document.body.style.overflow = '';
+    }
+
+    function closeReader() {
+      if (readerPushed) { readerPushed = false; history.back(); return; }
+      hideReader();
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+
+    // Zurück-Geste (Android, Browser) schließt den Artikel bzw. geht im Nano eine Ebene hoch
+    window.addEventListener('popstate', e => {
+      const state = e.state || {};
+      if (document.documentElement.dataset.view === 'nano') { nanoPopTo(state.nano || 1); return; }
+      if (state.reader && byId[state.reader]) { renderReader(byId[state.reader]); readerPushed = true; }
+      else { readerPushed = false; hideReader(); }
+    });
+
+    // ───────── Quellen & App ─────────
+    function renderSources() {
+      const created = new Date(edition.generated_at).toLocaleString('de-AT', { dateStyle: 'full', timeStyle: 'short' });
+      $('#sourcesList').innerHTML = `<p class="font-mono-meta text-[11px] text-[var(--ink-muted)] uppercase">Ausgabe vom ${esc(created)} · KI-Redaktion ${edition.ai ? 'an' : 'aus'}</p>` +
+        sections.map(sec => `
+          <div>
+            <div class="font-mono-meta text-[11px] uppercase tracking-widest font-bold border-b border-[var(--rule-light)] pb-1 mb-2" style="color:${accentOf(sec)}">${esc(sectionLabel(sec))}</div>
+            <ul class="space-y-1">${(sec.feeds || []).map(f => `
+              <li class="flex items-baseline justify-between gap-3">
+                <span class="truncate">${f.ok ? '✓' : '<span class="text-[var(--accent-red)]">✗</span>'} ${esc(f.name)}</span>
+                <span class="font-mono-meta text-[10px] text-[var(--ink-muted)] whitespace-nowrap">${f.ok ? (f.count == null ? '' : `${f.count} Artikel`) : 'nicht erreichbar'}</span>
+              </li>`).join('')}
+            </ul>
+          </div>`).join('');
+    }
+
+    function toggleSourcesModal(open) {
+      $('#sourcesModal').classList.toggle('hidden', !open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    // ───────── Hörausgabe (Sprachausgabe im Browser) ─────────
+    const tts = { idx: 0, chunks: [], chunk: 0, playing: false, rate: 1.0, token: 0 };
+    const chapters = () => edition?.briefing || [];
+
+    function renderChapterPills() {
+      $('#chapterPills').innerHTML = chapters().map((c, i) => `
+        ${i ? '<span class="text-[var(--rule-light)]">·</span>' : ''}
+        <button onclick="playSpecificChapter(${i})" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent">${String(i + 1).padStart(2, '0')} ${esc(c.title)}</button>`).join('');
+    }
+
+    function germanVoice() {
+      const voices = speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de'));
+      return voices.find(v => /de-AT/i.test(v.lang)) || voices.find(v => /premium|enhanced|natural|neural/i.test(v.name))
+        || voices.find(v => v.localService) || voices[0] || null;
+    }
+
+    // Lange Texte in Sätze-Häppchen teilen: Chrome bricht lange Utterances sonst nach ~15 s ab
+    function splitForSpeech(text) {
+      const sentences = text.match(/[^.!?…]+[.!?…]+["“”']?\s*|[^.!?…]+$/g) || [text];
+      return sentences.reduce((out, s) => {
+        if (out.length && out[out.length - 1].length + s.length < 220) out[out.length - 1] += s;
+        else out.push(s);
+        return out;
+      }, []);
+    }
+
+    function playSpecificChapter(index) {
+      if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
+      if (!chapters()[index]) return;
+      speechSynthesis.cancel();
+      tts.idx = index;
+      tts.chunks = splitForSpeech(chapters()[index].text);
+      tts.chunk = 0;
+      tts.playing = true;
+      speakChunk();
+    }
+
+    function speakChunk() {
+      const token = ++tts.token;
+      const utterance = new SpeechSynthesisUtterance(tts.chunks[tts.chunk]);
+      const voice = germanVoice();
+      if (voice) utterance.voice = voice;
+      utterance.lang = voice?.lang || 'de-DE';
+      utterance.rate = tts.rate;
+      utterance.onend = () => {
+        if (token !== tts.token || !tts.playing) return;
+        if (++tts.chunk < tts.chunks.length) speakChunk();
+        else if (tts.idx + 1 < chapters().length) setTimeout(() => { if (token === tts.token && tts.playing) playSpecificChapter(tts.idx + 1); }, 600);
+        else stopAudioBriefing();
+        updateAudioUI();
+      };
+      speechSynthesis.speak(utterance);
+      updateAudioUI();
+    }
+
+    function pauseAudioBriefing() {
+      tts.playing = false; tts.token++;
+      speechSynthesis.cancel();
+      updateAudioUI();
+    }
+    function resumeAudioBriefing() {
+      if (!tts.chunks.length) return playSpecificChapter(0);
+      tts.playing = true;
+      speakChunk();
+    }
+    function stopAudioBriefing() {
+      tts.playing = false; tts.token++; tts.chunks = []; tts.chunk = 0; tts.idx = 0;
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      updateAudioUI();
+    }
     function toggleAudioBriefing() {
       if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
-      isPlayingAudio ? stopAudioBriefing() : playSpecificChapter(0);
+      tts.playing ? pauseAudioBriefing() : resumeAudioBriefing();
     }
-    
-    function playSpecificChapter(index) {
-      if (!('speechSynthesis' in window) || !BRIEFING_CHAPTERS[index]) return;
-      window.speechSynthesis.cancel(); clearInterval(progressInterval);
-      
-      currentChapterIndex = index; isPlayingAudio = true;
-      document.getElementById('playIcon').textContent = '⏸';
-      document.getElementById('audioEarBox').classList.add('playing');
-      document.getElementById('audioTrackTitle').textContent = 'Liest: 0' + (index+1) + ' ' + BRIEFING_CHAPTERS[index].title;
-
-      document.querySelectorAll('.chapter-pill').forEach((el, idx) => {
-        idx === index ? el.classList.add('border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]') : el.classList.remove('border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]');
-      });
-
-      const utterance = new SpeechSynthesisUtterance(BRIEFING_CHAPTERS[index].text);
-      utterance.lang = 'de-DE'; utterance.rate = speechRate;
-      
-      let progress = 5; document.getElementById('audioProgressBar').style.width = `${progress}%`;
-      progressInterval = setInterval(() => {
-        if (progress < 95) { progress += 2; document.getElementById('audioProgressBar').style.width = `${progress}%`; }
-      }, 450);
-
-      utterance.onend = () => {
-        if (currentChapterIndex + 1 < BRIEFING_CHAPTERS.length) {
-          setTimeout(() => playSpecificChapter(currentChapterIndex + 1), 600);
-        } else { stopAudioBriefing(); }
-      };
-      window.speechSynthesis.speak(utterance);
+    function skipChapter(dir) {
+      const next = tts.idx + dir;
+      if (next >= 0 && next < chapters().length) playSpecificChapter(next);
     }
-
-    function stopAudioBriefing() {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      clearInterval(progressInterval); isPlayingAudio = false;
-      document.getElementById('playIcon').textContent = '▶';
-      document.getElementById('audioEarBox').classList.remove('playing');
-      document.getElementById('audioTrackTitle').textContent = 'Tages-Briefing abspielen';
-      document.getElementById('audioProgressBar').style.width = '0%';
-      document.querySelectorAll('.chapter-pill').forEach(el => el.classList.remove('border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]'));
-    }
-    
     function cycleSpeechRate() {
       const rates = [1.0, 1.2, 1.4];
-      speechRate = rates[(rates.indexOf(speechRate) + 1) % rates.length];
-      document.getElementById('speechRateBtn').textContent = `${speechRate.toFixed(1)}×`;
-      if (isPlayingAudio) playSpecificChapter(currentChapterIndex);
+      tts.rate = rates[(rates.indexOf(tts.rate) + 1) % rates.length];
+      $('#speechRateBtn').textContent = `${tts.rate.toFixed(1)}×`;
+      if (tts.playing) { tts.token++; speechSynthesis.cancel(); speakChunk(); }
+    }
+    function chapterProgress() {
+      return tts.chunks.length ? Math.round((tts.chunk / tts.chunks.length) * 100) : 0;
     }
 
-    // Extras
+    function updateAudioUI() {
+      const active = tts.chunks.length > 0;
+      const chapter = chapters()[tts.idx];
+      $('#playIcon').textContent = tts.playing ? '⏸' : '▶';
+      $('#audioEarBox').classList.toggle('playing', tts.playing);
+      $('#audioTrackTitle').textContent = active && chapter ? `${tts.playing ? 'Liest' : 'Pausiert'}: ${String(tts.idx + 1).padStart(2, '0')} ${chapter.title}` : 'Tages-Briefing abspielen';
+      $('#audioProgressBar').style.width = active ? `${Math.max(3, chapterProgress())}%` : '0%';
+      document.querySelectorAll('.chapter-pill').forEach((el, i) => {
+        const on = active && i === tts.idx;
+        ['border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]'].forEach(c => el.classList.toggle(c, on));
+      });
+      nanoAudioChanged();
+    }
+
+    // ───────── Extras ─────────
     function toggleDarkInk() {
       const isDark = document.documentElement.classList.toggle('dark-ink');
-      document.getElementById('themeIcon').textContent = isDark ? '☀' : '☾';
-      document.getElementById('themeLabel').textContent = isDark ? 'Tagespapier' : 'Abenddruck';
+      store.set('ink', isDark ? 'dark' : 'light');
+      updateInkLabels();
     }
-    function handlePaperNameChange(val) {
-      const title = val.split('|')[0];
-      document.getElementById('mastheadTitle').textContent = title;
+    function updateInkLabels() {
+      const isDark = document.documentElement.classList.contains('dark-ink');
+      $('#themeIcon').textContent = isDark ? '☀' : '☾';
+      $('#themeLabel').textContent = isDark ? 'Tagespapier' : 'Abenddruck';
+      document.querySelector('meta[name="theme-color"]').content = isDark ? '#151513' : '#F4F1EA';
+    }
+    function applyPaperName(val) {
+      const select = $('#paperNameSelect');
+      if (![...select.options].some(o => o.value === val)) val = select.options[0].value;
+      select.value = val;
+      const [title, subtitle] = val.split('|');
+      $('#mastheadTitle').textContent = title;
+      $('#mastheadSubtitle').textContent = subtitle;
+      $('#footerPaperTitle').textContent = title;
       document.title = `${title} — Persönliche Tagesausgabe`;
     }
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReaderModal(); });
+    function handlePaperNameChange(val) {
+      store.set('paperName', val);
+      applyPaperName(val);
+    }
+    function paperTitle() {
+      return $('#mastheadTitle').textContent || 'Morgenblatt';
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (document.documentElement.dataset.view === 'nano') return nanoKey(e);
+      if (e.key === 'Escape') { closeReader(); toggleSourcesModal(false); }
+      if (readerId && e.key === 'ArrowLeft') stepReader(-1);
+      if (readerId && e.key === 'ArrowRight') stepReader(1);
+    });
+
+    // ───────── NANO-MODUS ─────────
+    // Seiten-Stapel wie beim iPod: jede Ebene ist eine Liste oder ein Artikel.
+    // Seite = { title, build() → Einträge, sel } oder { title, kind: 'article' | 'np', ... }
+    let nanoStack = [];
+
+    function setView(view) {
+      if (view === 'nano' && readerId) { hideReader(); readerPushed = false; }
+      document.documentElement.dataset.view = view;
+      store.set('view', view);
+      if (view === 'nano') nanoStart();
+      else { history.replaceState(null, '', location.pathname + location.search); window.scrollTo(0, 0); }
+    }
+
+    function nanoStart() {
+      if (!edition) return;
+      nanoStack = [nanoRootPage()];
+      history.replaceState({ nano: 1 }, '', location.pathname + location.search);
+      nanoRender();
+    }
+
+    const nanoTop = () => nanoStack[nanoStack.length - 1];
+
+    function nanoRootPage() {
+      return {
+        title: () => paperTitle(),
+        build: () => [
+          ...(tts.chunks.length ? [{ label: 'Läuft gerade', go: nanoNowPlaying }] : []),
+          { label: 'Titelseite', go: () => nanoListPage('Titelseite', [edition.lead?.article, ...(edition.top || [])].filter(id => byId[id])) },
+          { label: 'Ressorts', go: nanoSectionsPage },
+          { label: 'Alle Meldungen', go: () => nanoListPage('Alle Meldungen', [...articles].sort(byDate).map(a => a.id)) },
+          { label: 'Hörausgabe', go: nanoBriefingPage },
+          ...(articles.some(a => a.audio) ? [{ label: 'Podcast-Folgen', go: () => nanoListPage('Podcasts', articles.filter(a => a.audio).sort(byDate).map(a => a.id)) }] : []),
+          { label: 'Einstellungen', go: nanoSettingsPage },
+          { label: 'Zeitungsansicht', go: () => setView('paper'), noChevron: true },
+        ],
+      };
+    }
+
+    function nanoSectionsPage() {
+      return {
+        title: 'Ressorts',
+        build: () => sections.map(s => {
+          const ids = articles.filter(a => a.section === s.id).map(a => a.id);
+          return { label: s.name, right: ids.length, go: () => nanoListPage(s.short, ids) };
+        }),
+      };
+    }
+
+    function nanoListPage(title, ids) {
+      return {
+        title,
+        empty: 'Heute nichts Neues.',
+        build: () => ids.map(id => {
+          const a = byId[id];
+          return { label: a.headline, sub: [a.audio ? '🎧' : '', a.source, timeAgo(a.published)].filter(Boolean).join(' · '), twoLine: true, go: () => nanoArticlePage(id, ids) };
+        }),
+      };
+    }
+
+    function nanoArticlePage(id, ids) {
+      return { title: sectionById[byId[id].section].short, kind: 'article', id, ids };
+    }
+
+    function nanoBriefingPage() {
+      const minutes = text => { const s = Math.round(text.split(/\s+/).length / 2.5); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+      return {
+        title: 'Hörausgabe',
+        empty: 'Kein Briefing in dieser Ausgabe.',
+        build: () => chapters().length ? [
+          { label: 'Alles abspielen', go: () => { playSpecificChapter(0); return nanoNowPlaying(); } },
+          ...chapters().map((c, i) => ({ label: c.title, right: minutes(c.text), go: () => { playSpecificChapter(i); return nanoNowPlaying(); } })),
+        ] : [],
+      };
+    }
+
+    function nanoNowPlaying() {
+      return { title: 'Läuft gerade', kind: 'np' };
+    }
+
+    function nanoSettingsPage() {
+      const onOff = on => on ? 'An' : 'Aus';
+      return {
+        title: 'Einstellungen',
+        build: () => [
+          { label: 'Abenddruck', right: onOff(document.documentElement.classList.contains('dark-ink')), go: () => { toggleDarkInk(); nanoRefresh(); }, noChevron: true },
+          { label: 'Klickgeräusch', right: onOff(store.get('nanoClick', '1') === '1'), go: () => { store.set('nanoClick', store.get('nanoClick', '1') === '1' ? '0' : '1'); nanoRefresh(); }, noChevron: true },
+          { label: 'Vorlesetempo', right: `${tts.rate.toFixed(1)}×`, go: () => { cycleSpeechRate(); nanoRefresh(); }, noChevron: true },
+          { label: 'Quellen', go: () => ({
+              title: 'Quellen',
+              build: () => sections.flatMap(s => (s.feeds || []).map(f => ({ label: `${f.ok ? '✓' : '✗'} ${f.name}`, sub: s.short, twoLine: true, right: f.ok ? f.count : '', noChevron: true, go: () => {} }))),
+            }) },
+          { label: 'Über diese Ausgabe', go: () => ({
+              title: 'Über',
+              build: () => [
+                { label: 'Erstellt', right: fmtDateTime(edition.generated_at), noChevron: true, go: () => {} },
+                { label: 'Meldungen', right: articles.length, noChevron: true, go: () => {} },
+                { label: 'Mit Volltext', right: articles.filter(a => a.full_text).length, noChevron: true, go: () => {} },
+                { label: 'KI-Redaktion', right: onOff(edition.ai), noChevron: true, go: () => {} },
+              ],
+            }) },
+        ],
+      };
+    }
+
+    // ── Zeichnen ──
+    function nanoBuildPage(page) {
+      const el = document.createElement('div');
+      el.className = 'nano-page';
+      if (page.kind === 'article') {
+        const a = byId[page.id];
+        const audio = safeUrl(a.audio);
+        el.innerHTML = `
+          <div class="nano-article">
+            <div class="meta">${esc([a.source, timeAgo(a.published), `${a.reading_minutes} Min.`].filter(Boolean).join(' · '))}</div>
+            <h2>${esc(a.headline)}</h2>
+            ${a.takeaway ? `<div class="summary">${esc(a.summary)}</div>` : ''}
+            ${audio ? `<audio controls preload="none" src="${esc(audio)}"></audio>` : ''}
+            <div class="body">${a.content_html || `<p>${esc(a.summary)}</p>`}</div>
+            ${a.full_text ? '' : '<div class="note">Nur Auszug im Feed – Volltext beim Original.</div>'}
+            ${safeUrl(a.link) ? `<a class="orig" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">Original öffnen ↗</a>` : ''}
+          </div>`;
+        fixMedia(el);
+      } else if (page.kind === 'np') {
+        el.innerHTML = `
+          <div class="nano-np">
+            <div class="nano-cover"><b>${esc(paperTitle().charAt(0))}</b><small>HÖRAUSGABE</small></div>
+            <div class="t" id="npTitle"></div>
+            <div class="s" id="npSub"></div>
+            <div class="bar"><div id="npBar" style="width:0%"></div></div>
+            <div class="hint">◀◀ ▶▶ Kapitel · ▶❙❙ Pause</div>
+          </div>`;
+      } else {
+        page.items = page.build();
+        page.sel = Math.min(page.sel || 0, Math.max(0, page.items.length - 1));
+        el.innerHTML = page.items.length ? `<ul class="nano-list">` + page.items.map((it, i) => `
+          <li class="nano-item ${it.twoLine ? 'two-line' : ''} ${i === page.sel ? 'is-sel' : ''}" data-i="${i}">
+            <span class="nano-label">${esc(it.label)}${it.sub ? `<span class="nano-sub">${esc(it.sub)}</span>` : ''}</span>
+            ${it.right !== undefined && it.right !== '' ? `<span class="nano-right">${esc(it.right)}</span>` : ''}
+            ${it.noChevron ? '' : '<span class="nano-chevron">›</span>'}
+          </li>`).join('') + `</ul>` : `<div class="nano-empty">${esc(page.empty || 'Leer')}</div>`;
+        el.addEventListener('click', e => {
+          const li = e.target.closest('.nano-item');
+          if (!li) return;
+          nanoSelect(+li.dataset.i, false);
+          nanoActivate();
+        });
+      }
+      return el;
+    }
+
+    function nanoRender(dir) {
+      const page = nanoTop();
+      const stage = $('#nanoStage');
+      const old = stage.lastElementChild;
+      const el = nanoBuildPage(page);
+      $('#nanoTitle').textContent = typeof page.title === 'function' ? page.title() : page.title;
+      if (!old || !dir) {
+        stage.replaceChildren(el);
+      } else {
+        el.classList.add(dir === 'fwd' ? 'from-right' : 'from-left');
+        stage.appendChild(el);
+        old.classList.add(dir === 'fwd' ? 'to-left' : 'to-right');
+        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('from-right', 'from-left')));
+        setTimeout(() => old.remove(), 280);
+      }
+      el.querySelector('.is-sel')?.scrollIntoView({ block: 'nearest' });
+      nanoAudioChanged();
+    }
+
+    function nanoRefresh() {
+      const scroll = $('#nanoStage').lastElementChild?.scrollTop || 0;
+      nanoRender();
+      $('#nanoStage').lastElementChild.scrollTop = scroll;
+    }
+
+    function nanoPush(page) {
+      nanoStack.push(page);
+      history.pushState({ nano: nanoStack.length }, '');
+      nanoRender('fwd');
+    }
+
+    function nanoPopTo(depth) {
+      if (depth >= nanoStack.length) return;
+      nanoStack.length = Math.max(1, depth);
+      nanoRender('back');
+    }
+
+    function nanoBack() {
+      if (nanoStack.length > 1) history.back();
+    }
+
+    // ── Bedienung ──
+    function nanoSelect(i, scroll = true) {
+      const page = nanoTop();
+      if (!page.items?.length) return;
+      i = Math.max(0, Math.min(page.items.length - 1, i));
+      if (i === page.sel) return;
+      page.sel = i;
+      const el = $('#nanoStage').lastElementChild;
+      el.querySelector('.is-sel')?.classList.remove('is-sel');
+      const li = el.querySelector(`[data-i="${i}"]`);
+      li?.classList.add('is-sel');
+      if (scroll) li?.scrollIntoView({ block: 'nearest' });
+      nanoTick();
+    }
+
+    function nanoStep(dir) {
+      const page = nanoTop();
+      if (page.kind === 'article') {
+        $('#nanoStage').lastElementChild.scrollBy({ top: dir * 52 });
+        nanoTick();
+      } else if (page.items) {
+        nanoSelect(page.sel + dir);
+      }
+    }
+
+    function nanoActivate() {
+      const page = nanoTop();
+      if (page.kind === 'article') {
+        const el = $('#nanoStage').lastElementChild;
+        el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'smooth' });
+        return;
+      }
+      const item = page.items?.[page.sel];
+      if (!item) return;
+      nanoTick();
+      const next = item.go();
+      if (next && document.documentElement.dataset.view === 'nano') nanoPush(next);
+    }
+
+    function nanoSkip(dir) {
+      const page = nanoTop();
+      if (page.kind === 'article') {
+        const next = page.ids[page.ids.indexOf(page.id) + dir];
+        if (!next) return;
+        nanoStack[nanoStack.length - 1] = nanoArticlePage(next, page.ids);
+        nanoRender(dir > 0 ? 'fwd' : 'back');
+      } else if (tts.chunks.length) {
+        skipChapter(dir);
+      }
+    }
+
+    function nanoPlayPause() {
+      const audioEl = nanoTop().kind === 'article' && $('#nanoStage').lastElementChild.querySelector('audio');
+      if (audioEl) { audioEl.paused ? audioEl.play() : audioEl.pause(); return; }
+      toggleAudioBriefing();
+    }
+
+    function nanoAction(act) {
+      if (act === 'menu') nanoBack();
+      if (act === 'prev') nanoSkip(-1);
+      if (act === 'next') nanoSkip(1);
+      if (act === 'play') nanoPlayPause();
+      if (act === 'select') nanoActivate();
+    }
+
+    function nanoAudioChanged() {
+      const indicator = $('#nanoPlayIndicator');
+      if (!indicator) return;
+      indicator.textContent = tts.playing ? '▶' : (tts.chunks.length ? '❙❙' : '');
+      if (nanoTop()?.kind !== 'np' || !$('#npTitle')) return;
+      const chapter = chapters()[tts.idx];
+      $('#npTitle').textContent = tts.chunks.length && chapter ? chapter.title : 'Nichts läuft';
+      $('#npSub').textContent = tts.chunks.length ? `Kapitel ${tts.idx + 1} von ${chapters().length}${tts.playing ? '' : ' · pausiert'}` : 'Drück ▶❙❙ für das Briefing';
+      $('#npBar').style.width = `${chapterProgress()}%`;
+    }
+
+    function nanoKey(e) {
+      if (e.target.closest('input, select, textarea')) return;
+      const keys = {
+        ArrowDown: () => nanoStep(1), ArrowUp: () => nanoStep(-1),
+        Enter: () => nanoActivate(), ArrowRight: () => nanoTop().kind === 'article' ? nanoSkip(1) : nanoActivate(),
+        ArrowLeft: () => nanoBack(), Escape: () => nanoBack(), Backspace: () => nanoBack(),
+        ' ': () => nanoPlayPause(),
+      };
+      if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+    }
+
+    // Klick-Geräusch des Rads (kurzer Rauschimpuls) + leichtes Vibrieren auf Android
+    let clickCtx = null, clickBuf = null;
+    function nanoTick() {
+      if (navigator.vibrate) navigator.vibrate(3);
+      if (store.get('nanoClick', '1') !== '1') return;
+      try {
+        if (!clickCtx) {
+          clickCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const len = Math.round(clickCtx.sampleRate * 0.004);
+          clickBuf = clickCtx.createBuffer(1, len, clickCtx.sampleRate);
+          const data = clickBuf.getChannelData(0);
+          for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
+        }
+        const src = clickCtx.createBufferSource();
+        const gain = clickCtx.createGain();
+        gain.gain.value = 0.35;
+        src.buffer = clickBuf;
+        src.connect(gain).connect(clickCtx.destination);
+        src.start();
+      } catch (e) {}
+    }
+
+    // Click Wheel: Drehen = blättern, Tippen auf die Beschriftung = Taste
+    (function setupWheel() {
+      const wheel = $('#nanoWheel');
+      const STEP = 18; // Grad pro Klick → 20 Klicks pro Umdrehung
+      let lastAngle = null, acc = 0, moved = false, downBtn = null;
+      const angleOf = e => {
+        const r = wheel.getBoundingClientRect();
+        return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI;
+      };
+      wheel.addEventListener('pointerdown', e => {
+        if (e.target.closest('.nano-center')) return;
+        lastAngle = angleOf(e); acc = 0; moved = false;
+        downBtn = e.target.closest('[data-act]');
+        wheel.setPointerCapture(e.pointerId);
+      });
+      wheel.addEventListener('pointermove', e => {
+        if (lastAngle === null) return;
+        const angle = angleOf(e);
+        let delta = angle - lastAngle;
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+        lastAngle = angle;
+        acc += delta;
+        while (Math.abs(acc) >= STEP) {
+          const dir = Math.sign(acc);
+          acc -= dir * STEP;
+          moved = true;
+          nanoStep(dir);
+        }
+      });
+      const end = () => {
+        if (lastAngle !== null && !moved && downBtn) nanoAction(downBtn.dataset.act);
+        lastAngle = null; downBtn = null;
+      };
+      wheel.addEventListener('pointerup', end);
+      wheel.addEventListener('pointercancel', () => { lastAngle = null; downBtn = null; });
+      $('#nanoCenter').addEventListener('click', () => nanoAction('select'));
+    })();
+
+    // ───────── App (PWA) ─────────
+    updateInkLabels();
+    let installPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      installPrompt = e;
+      $('#installBtn').classList.remove('hidden');
+    });
+    function installApp() {
+      installPrompt?.prompt();
+      installPrompt = null;
+      $('#installBtn').classList.add('hidden');
+    }
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
   </script>
 </body>
 </html>

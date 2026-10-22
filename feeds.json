@@ -1,0 +1,69 @@
+{
+  "titel": "MORGENBLATT",
+  "unterzeile": "Wiener Privatredaktion • Kuratierte Tagesausgabe",
+  "telegramm": {
+    "titel": "Sport-Telegramm",
+    "unterzeile": "Hütteldorf & PDC"
+  },
+  "einstellungen": {
+    "max_artikel_pro_feed": 8,
+    "max_alter_tage": 4,
+    "volltext_nachladen": true
+  },
+  "ressorts": [
+    {
+      "id": "med_ai",
+      "name": "Klinik-IT",
+      "icon": "🏥",
+      "feeds": [
+        "https://www.thelancet.com/rssfeed/landig_current.xml",
+        "https://www.kma-online.de/rss/aktuelle-meldungen.xml",
+        "https://www.e-health-com.de/rss.xml"
+      ]
+    },
+    {
+      "id": "ai",
+      "name": "Künstliche Intelligenz",
+      "kurz": "KI",
+      "icon": "🤖",
+      "feeds": [
+        "https://anchor.fm/s/f7cac464/podcast/rss",
+        "https://www.oneusefulthing.org/feed",
+        "https://www.heise.de/thema/Kuenstliche-Intelligenz.xml"
+      ]
+    },
+    {
+      "id": "geopolitik",
+      "name": "Geopolitik & Sicherheit",
+      "kurz": "Geopolitik",
+      "icon": "🌍",
+      "feeds": [
+        "https://sicherheitspod.de/feed/mp3/",
+        "https://warontherocks.com/feed/",
+        "https://www.swp-berlin.org/rss.xml",
+        "https://zeitschrift-ip.dgap.org/de/rss.xml"
+      ]
+    },
+    {
+      "id": "rapid",
+      "name": "SK Rapid",
+      "kurz": "Rapid",
+      "icon": "⚽",
+      "telegramm": true,
+      "farbe": "gruen",
+      "feeds": [
+        "https://news.google.com/rss/search?q=%22SK+Rapid%22+OR+%22Rapid+Wien%22&hl=de-AT&gl=AT&ceid=AT:de"
+      ]
+    },
+    {
+      "id": "darts",
+      "name": "Darts",
+      "icon": "🎯",
+      "telegramm": true,
+      "feeds": [
+        "https://www.dartsnews.de/feed",
+        "https://www.dartn.de/rss.xml"
+      ]
+    }
+  ]
+}

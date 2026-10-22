@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#F4F1EA"/>
+  <text x="256" y="300" text-anchor="middle" font-family="'Playfair Display', Georgia, 'Times New Roman', serif" font-weight="900" font-size="320" fill="#141413">M</text>
+  <rect x="102" y="374" width="308" height="11" fill="#141413"/>
+  <rect x="102" y="397" width="308" height="5" fill="#141413"/>
+  <circle cx="256" cy="436" r="18" fill="#8F241E"/>
+</svg>
