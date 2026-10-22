@@ -2,125 +2,477 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Morgenblatt • Persönliche Ausgabe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>MORGENBLATT — Wiener Privatredaktion</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,400;1,600;1,700&display=swap" rel="stylesheet">
+  
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #F4F1EA; color: #1C1917; }
-    .newspaper-title { font-family: 'Playfair Display', serif; }
-    .drop-cap::first-letter { font-family: 'Playfair Display', serif; float: left; font-size: 3.2rem; line-height: 0.8; padding-top: 4px; padding-right: 8px; font-weight: 700; color: #1C1917; }
+    :root {
+      --paper-bg: #F4F1EA;
+      --paper-elevated: #EAE5D9;
+      --paper-highlight: #E2DCCB;
+      --ink-primary: #141413;
+      --ink-secondary: #4A4843;
+      --ink-muted: #78746C;
+      --rule-heavy: #141413;
+      --rule-light: #CEC8B8;
+      --accent-red: #8F241E;
+      --accent-green: #1B4D3E;
+    }
+
+    html.dark-ink {
+      --paper-bg: #151513;
+      --paper-elevated: #1E1E1B;
+      --paper-highlight: #282723;
+      --ink-primary: #EAE6DF;
+      --ink-secondary: #B5B0A6;
+      --ink-muted: #7D7970;
+      --rule-heavy: #EAE6DF;
+      --rule-light: #33322D;
+      --accent-red: #D9534F;
+      --accent-green: #3B9E7E;
+    }
+
+    body {
+      background-color: var(--paper-bg);
+      color: var(--ink-primary);
+      font-family: 'Newsreader', Georgia, serif;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      background-image: radial-gradient(rgba(20, 20, 19, 0.03) 1px, transparent 0);
+      background-size: 24px 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-masthead { font-family: 'Playfair Display', Georgia, serif; }
+    .font-serif-body { font-family: 'Newsreader', Georgia, serif; }
+    .font-mono-meta { font-family: 'JetBrains Mono', monospace; }
+
+    .double-rule-top { border-top: 3px double var(--rule-heavy); }
+    .double-rule-bottom { border-bottom: 4px double var(--rule-heavy); }
+    .hairline-top { border-top: 1px solid var(--rule-light); }
+    .hairline-bottom { border-bottom: 1px solid var(--rule-light); }
+    .bold-rule-top { border-top: 2px solid var(--rule-heavy); }
+    .bold-rule-bottom { border-bottom: 1.5px solid var(--rule-heavy); }
+
+    @media (min-width: 1024px) {
+      .col-rule-right { border-right: 1px solid var(--rule-light); }
+    }
+
+    .drop-cap::first-letter {
+      float: left; font-family: 'Playfair Display', Georgia, serif;
+      font-size: 3.9rem; line-height: 0.82; padding-top: 4px;
+      padding-right: 10px; padding-bottom: 2px; font-weight: 700;
+      color: var(--ink-primary);
+    }
+
+    @media (min-width: 768px) {
+      .newspaper-columns-2 {
+        column-count: 2; column-gap: 1.75rem;
+        column-rule: 1px solid var(--rule-light);
+        text-align: justify; hyphens: auto;
+      }
+    }
+
+    @keyframes eqPulse {
+      0%, 100% { height: 4px; }
+      50% { height: 15px; }
+    }
+    .eq-bar {
+      width: 2.5px; background-color: var(--accent-red);
+      display: inline-block; transition: height 0.2s ease;
+    }
+    .playing .eq-bar-1 { animation: eqPulse 0.7s infinite ease-in-out 0.1s; }
+    .playing .eq-bar-2 { animation: eqPulse 0.55s infinite ease-in-out 0.25s; }
+    .playing .eq-bar-3 { animation: eqPulse 0.8s infinite ease-in-out 0.05s; }
+    .playing .eq-bar-4 { animation: eqPulse 0.6s infinite ease-in-out 0.35s; }
   </style>
 </head>
-<body class="min-h-screen pb-24 selection:bg-stone-300">
+<body class="min-h-screen pb-24 lg:pb-16 selection:bg-[#8F241E] selection:text-white">
 
-  <!-- Zeitungs-Kopf -->
-  <header class="border-b-2 border-stone-900 pt-6 pb-4 px-4 max-w-5xl mx-auto">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-stone-400 pb-4">
-      <div>
-        <div class="text-xs uppercase tracking-widest font-semibold text-stone-600">Ausgabe Wien • Kuratiertes Redaktions-Briefing</div>
-        <h1 class="newspaper-title text-5xl md:text-6xl font-bold tracking-tight mt-1 text-stone-900">Morgenblatt</h1>
-        <div class="text-xs italic text-stone-500 mt-1">„Signal statt Rauschen — AI, Geopolitik, Medical Tech & Sport“</div>
+  <!-- TOP META BAR -->
+  <div class="w-full hairline-bottom bg-[var(--paper-elevated)] text-[11px] font-mono-meta">
+    <div class="max-w-[1380px] mx-auto px-3 sm:px-6 py-1.5 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="uppercase tracking-wider text-[var(--ink-muted)] hidden sm:inline">Blatt-Titel:</span>
+        <select id="paperNameSelect" onchange="handlePaperNameChange(this.value)" class="bg-transparent border border-[var(--rule-light)] px-2 py-0.5 text-[var(--ink-primary)] font-medium focus:outline-none cursor-pointer">
+          <option value="MORGENBLATT|Wiener Privatredaktion • Kuratierte Tagesausgabe">MORGENBLATT (Klassisch)</option>
+          <option value="MELANGE|Wiener Tagesblatt für KI, Klinik, Welt & Hütteldorf">MELANGE (Wienerisch)</option>
+          <option value="DAS RESERVAT|Persönliche Morgenausgabe • Ohne Algorithmus">DAS RESERVAT (Editorial)</option>
+        </select>
       </div>
-    </div>
 
-    <div class="flex justify-between items-center text-xs font-medium text-stone-600 pt-2 uppercase tracking-wider">
-      <span id="current-date">Heute</span>
-      <span>Status: <span id="sync-status" class="text-emerald-700 font-bold">Ausgabe aktuell</span></span>
-    </div>
-  </header>
-
-  <!-- Fehler-Box (wird nur angezeigt, wenn JSON klemmt) -->
-  <div id="error-box" class="max-w-5xl mx-auto px-4 mt-4 hidden">
-    <div class="bg-red-100 border-l-4 border-red-700 p-4 text-red-900 text-sm">
-      <strong>Hinweis beim Laden:</strong> <span id="error-msg"></span>
+      <div class="flex items-center gap-3 ml-auto">
+        <span id="sync-status" class="text-[#1B4D3E] font-bold">Lade aktuelle Ausgabe...</span>
+        <span class="text-[var(--rule-light)]">|</span>
+        <button onclick="toggleDarkInk()" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition">
+          <span id="themeIcon">☾</span>
+          <span id="themeLabel">Abenddruck</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Hauptinhalt -->
-  <main class="max-w-5xl mx-auto px-4 mt-8">
-    
-    <!-- Leitartikel (Deep Dive) -->
-    <section id="deep-dive-section" class="mb-12 border-b-2 border-stone-900 pb-8">
-      <div class="text-xs uppercase tracking-widest font-bold text-red-800 mb-2">Leitartikel & Journal des Tages</div>
-      <div class="bg-stone-200/60 border border-stone-400 p-6 md:p-8 rounded-sm">
-        <h2 id="deep-title" class="newspaper-title text-3xl md:text-4xl font-bold text-stone-900 mb-4">Lade heutiges Thema...</h2>
-        <p id="deep-summary" class="drop-cap text-stone-800 text-base md:text-lg leading-relaxed mb-6">
-          Warte auf die morgendliche Zusammenfassung...
-        </p>
-        <div class="bg-stone-900 text-stone-100 p-4 text-sm rounded-sm">
-          <span class="font-bold text-stone-300 uppercase tracking-wider text-xs block mb-1">Warum das heute relevant ist:</span>
-          <span id="deep-takeaway">Wird analysiert...</span>
+  <!-- HAUPTCONTAINER -->
+  <div class="max-w-[1380px] mx-auto px-3 sm:px-6 pt-3 sm:pt-6">
+
+    <header class="pb-2">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pb-4">
+        
+        <div class="lg:col-span-3 order-2 lg:order-1 border border-[var(--rule-light)] p-3 bg-[var(--paper-elevated)]/40 flex lg:flex-col justify-between items-center lg:items-start gap-2">
+          <div>
+            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)] font-semibold">
+              Ausgabe Wien • KI Kuratiert
+            </div>
+            <div class="text-xs text-[var(--ink-secondary)] mt-0.5 leading-snug">
+              Persönliche Zusammenstellung aus 8 Fach-Feeds.
+            </div>
+          </div>
+          <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] border-t border-[var(--rule-light)] pt-1.5 w-full hidden lg:flex justify-between">
+            <span>JAHRGANG I</span>
+            <span>PREIS: 0,00 €</span>
+          </div>
         </div>
+
+        <div class="lg:col-span-5 order-1 lg:order-2 text-center py-1">
+          <div class="font-mono-meta text-[10px] uppercase tracking-[0.25em] text-[var(--ink-muted)] mb-1" id="currentDateDisplay">
+            HEUTE
+          </div>
+          <h1 id="mastheadTitle" class="font-masthead text-5xl sm:text-6xl xl:text-7xl font-black tracking-tight leading-none uppercase select-none">
+            MELANGE
+          </h1>
+          <p id="mastheadSubtitle" class="font-serif-body italic text-sm sm:text-base text-[var(--ink-secondary)] mt-1.5">
+            Wiener Tagesblatt für KI, Klinik, Welt & Hütteldorf
+          </p>
+        </div>
+
+        <!-- AUDIO PLAYER -->
+        <div id="audioEarBox" class="lg:col-span-4 order-3 border border-[var(--rule-heavy)] bg-[var(--paper-elevated)] p-3 relative">
+          <div class="flex items-start justify-between gap-3">
+            <button onclick="toggleAudioBriefing()" id="playBriefingBtn" class="w-11 h-11 shrink-0 bg-[var(--ink-primary)] text-[var(--paper-bg)] hover:bg-[var(--accent-red)] transition flex items-center justify-center font-mono-meta text-sm font-bold">
+              <span id="playIcon">▶</span>
+            </button>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono-meta text-[10px] uppercase tracking-wider font-bold text-[var(--accent-red)]">● HÖRAUSGABE (KI-STIMME)</span>
+                  <div class="flex items-end gap-0.5 h-3" id="eqVisualizer">
+                    <span class="eq-bar eq-bar-1 h-1"></span>
+                    <span class="eq-bar eq-bar-2 h-2"></span>
+                    <span class="eq-bar eq-bar-3 h-1.5"></span>
+                    <span class="eq-bar eq-bar-4 h-1"></span>
+                  </div>
+                </div>
+              </div>
+              <div id="audioTrackTitle" class="font-serif-body font-semibold text-sm truncate mt-0.5">Tages-Briefing abspielen</div>
+              <div class="w-full bg-[var(--rule-light)] h-1 mt-2 overflow-hidden">
+                <div id="audioProgressBar" class="bg-[var(--accent-red)] h-full w-0 transition-all duration-300"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="double-rule-top bold-rule-bottom py-2 flex items-center justify-between overflow-x-auto gap-4 font-mono-meta text-xs uppercase tracking-wider">
+        <div class="flex items-center gap-1 sm:gap-5 shrink-0">
+          <span class="font-bold text-[var(--accent-red)] underline underline-offset-4 px-1.5 py-0.5">Titelseite (Alle Ressorts)</span>
+        </div>
+        <div class="hidden xl:flex items-center gap-2 text-[11px] text-[var(--ink-muted)] shrink-0">
+          <span>REDAKTIONSSCHLUSS: 06:00 UHR</span>
+        </div>
+      </nav>
+    </header>
+
+    <!-- SEITE 1: LEITARTIKEL & SPIEGEL -->
+    <section id="frontPageSpread" class="mt-4 pb-8 double-rule-bottom">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- SPALTE LINKS: KURZMELDUNGEN -->
+        <aside class="lg:col-span-3 col-rule-right lg:pr-5 flex flex-col justify-between">
+          <div>
+            <div class="bold-rule-top hairline-bottom py-1 mb-3 flex items-center justify-between">
+              <h2 class="font-mono-meta text-[11px] uppercase tracking-widest font-bold">Das Wichtigste heute</h2>
+            </div>
+            <div class="space-y-4" id="left-sidebar-content">
+              <div class="text-[var(--ink-muted)] italic font-serif-body text-sm">Ressorts werden geladen...</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ZENTRUM: DEEP DIVE LEITARTIKEL -->
+        <main class="lg:col-span-6 col-rule-right lg:pr-5">
+          <div class="flex items-center justify-between font-mono-meta text-[11px] uppercase tracking-widest text-[var(--accent-red)] mb-1">
+            <span>SCHWERPUNKT • LEITARTIKEL</span>
+          </div>
+          <h2 id="deep-title" class="font-masthead text-3xl sm:text-4xl xl:text-[42px] font-bold leading-[1.08] tracking-tight hover:text-[var(--accent-red)] transition">
+            Heutiges Hauptthema wird generiert...
+          </h2>
+          <p id="deep-summary" class="font-serif-body italic text-lg sm:text-xl text-[var(--ink-secondary)] mt-2.5 leading-snug">
+            Bitte warte kurz auf die KI-Zusammenfassung...
+          </p>
+          <div class="newspaper-columns-2 text-[16px] leading-[1.62] text-[var(--ink-primary)] mt-4">
+            <p id="deep-body" class="drop-cap mb-3">Die tagesaktuellen Daten werden aus der JSON geladen.</p>
+          </div>
+          <div class="mt-4 bg-[var(--paper-elevated)] p-4 border-l-4 border-[var(--accent-red)]">
+            <span class="font-mono-meta text-[10px] uppercase font-bold text-[var(--accent-red)] block mb-1">Redaktionelles Takeaway</span>
+            <span id="deep-takeaway" class="font-serif-body text-sm">Analyse folgt...</span>
+          </div>
+        </main>
+
+        <!-- SPALTE RECHTS: SPORT & MEHR -->
+        <aside class="lg:col-span-3 flex flex-col justify-between gap-6">
+          <div class="border-2 border-[var(--rule-heavy)] p-3.5 bg-[var(--paper-elevated)]/50">
+            <div class="flex items-center justify-between border-b border-[var(--rule-heavy)] pb-1.5 mb-3">
+              <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Sport & Welt</span>
+            </div>
+            <div id="right-sidebar-content" class="space-y-4">
+              <!-- Dynamischer Inhalt -->
+            </div>
+          </div>
+        </aside>
+
       </div>
     </section>
 
-    <!-- Ressorts (Kategorien) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="articles-container">
-      <div class="col-span-3 text-center py-12 text-stone-500">Lade Ressorts...</div>
+    <!-- ALLE RESSORTS GRID -->
+    <section class="mt-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 bold-rule-bottom mb-6">
+        <div>
+          <span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">WEITERE MELDUNGEN</span>
+          <h2 class="font-masthead text-2xl sm:text-3xl font-bold">Die restliche Ausgabe</h2>
+        </div>
+      </div>
+      <div id="newspaperArticlesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6">
+        <!-- Artikel per JS eingesetzt -->
+      </div>
+    </section>
+
+    <footer class="mt-16 pt-6 double-rule-top text-center sm:text-left">
+      <div class="py-4 flex flex-col sm:flex-row justify-between items-center font-mono-meta text-[10px] text-[var(--ink-muted)] gap-2">
+        <span>GEDRUCKT AUF DIGITALEM ZEITUNGSPAPIER (#F4F1EA)</span>
+        <span>KI-KURATIERT VIA GEMINI-3-FLASH</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- LESE-MODAL -->
+  <div id="readerModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs overflow-y-auto p-2 sm:p-6">
+    <div class="max-w-3xl mx-auto bg-[var(--paper-bg)] border-2 border-[var(--rule-heavy)] p-5 sm:p-10 my-4 relative shadow-2xl">
+      <div class="flex items-center justify-between pb-3 double-rule-bottom mb-6">
+        <div class="font-mono-meta text-xs uppercase tracking-widest text-[var(--accent-red)] font-bold" id="modalCategory">RESSORT</div>
+        <button onclick="closeReaderModal()" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕ Schließen</button>
+      </div>
+      <div class="font-mono-meta text-[11px] text-[var(--ink-muted)] uppercase mb-2" id="modalMeta">QUELLE</div>
+      <h2 id="modalTitle" class="font-masthead text-2xl sm:text-4xl font-bold leading-tight mb-4">Artikeltitel</h2>
+      <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)] p-4 my-5">
+        <div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold text-[var(--accent-red)] mb-2">Redaktionelle Zusammenfassung (Key Takeaways)</div>
+        <ul id="modalBullets" class="list-disc list-inside space-y-1.5 text-sm font-serif-body text-[var(--ink-primary)]"></ul>
+      </div>
+      <div id="modalBody" class="font-serif-body text-lg leading-relaxed space-y-4 text-[var(--ink-primary)]"></div>
+      <div class="mt-8 pt-4 bold-rule-top flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <a id="modalExternalLink" href="#" target="_blank" rel="noopener" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Originalartikel öffnen ↗</a>
+      </div>
     </div>
-  </main>
+  </div>
 
   <script>
+    // Datum setzen
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('current-date').innerText = new Date().toLocaleDateString('de-DE', options);
+    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('de-DE', options).toUpperCase();
 
-    // JSON einlesen mit Cache-Busting, damit du immer die neuste Version siehst
+    // Globale Daten
+    let allArticles = [];
+    let BRIEFING_CHAPTERS = [];
+    let isPlayingAudio = false;
+    let currentChapterIndex = 0;
+    let progressInterval = null;
+
+    // Helper für das Layout
+    function renderSmallArticle(art, isRightSidebar = false) {
+      const catColor = art.catKey === 'rapid' ? 'text-[var(--accent-green)]' : (isRightSidebar ? 'text-[var(--accent-red)]' : 'text-[var(--ink-muted)]');
+      return `
+        <div class="pb-3 hairline-bottom cursor-pointer group" onclick="openReaderModal('${art.id}')">
+          <div class="font-mono-meta text-[10px] uppercase tracking-wider ${catColor} font-semibold">${art.categoryLabel}</div>
+          <h3 class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${art.title}</h3>
+          <p class="text-sm text-[var(--ink-secondary)] mt-1 leading-relaxed">${art.summary.substring(0, 100)}...</p>
+        </div>
+      `;
+    }
+
+    // JSON LADEN UND VERTEILEN
     fetch('edition.json?t=' + new Date().getTime())
       .then(res => {
-        if (!res.ok) throw new Error("HTTP Fehler " + res.status + " beim Laden von edition.json");
+        if (!res.ok) throw new Error("Netzwerkfehler");
         return res.json();
       })
       .then(data => {
-        // Deep Dive befüllen
+        document.getElementById('sync-status').innerText = 'Ausgabe aktuell ✓';
+
+        // 1. DEEP DIVE (Mitte)
         if(data.deep_dive) {
           document.getElementById('deep-title').innerText = data.deep_dive.title || '';
           document.getElementById('deep-summary').innerText = data.deep_dive.summary || '';
+          document.getElementById('deep-body').innerText = data.deep_dive.summary || '';
           document.getElementById('deep-takeaway').innerText = data.deep_dive.takeaway || '';
         }
 
-        const container = document.getElementById('articles-container');
-        container.innerHTML = '';
-        
+        // 2. KATEGORIEN SAMMELN
         const categories = [
-          { key: 'geopolitik', label: '🌍 Geopolitik & Sicherheit' },
-          { key: 'ai', label: '🤖 AI & Strategie' },
-          { key: 'med_ai', label: '🏥 Medical AI & KIS' },
-          { key: 'rapid', label: '⚽ SK Rapid' },
-          { key: 'darts', label: '🎯 Darts' }
+          { key: 'med_ai', label: 'I. Klinik-IT & Medical AI' },
+          { key: 'ai', label: 'II. Künstliche Intelligenz' },
+          { key: 'geopolitik', label: 'III. Geopolitik & Sicherheit' },
+          { key: 'rapid', label: 'IV. SK Rapid Wien' },
+          { key: 'darts', label: 'V. Darts PDC' }
         ];
 
-        // Kategorien iterieren und ins Raster packen
         categories.forEach(cat => {
-          if(data[cat.key] && data[cat.key].length > 0) {
-            let col = document.createElement('div');
-            col.className = 'space-y-6';
-            col.innerHTML = `<div class="border-b-2 border-stone-900 pb-1 mb-4"><h3 class="newspaper-title text-2xl font-bold uppercase">${cat.label}</h3></div>`;
-            
-            data[cat.key].forEach(art => {
-              col.innerHTML += `
-                <article class="border-b border-stone-300 pb-4 group">
-                  <div class="text-[10px] uppercase font-semibold text-stone-500 mb-1">${art.source || ''}</div>
-                  <h4 class="font-bold text-stone-900 group-hover:underline text-base mb-2 leading-snug">
-                    <a href="${art.link || '#'}" target="_blank">${art.title || ''}</a>
-                  </h4>
-                  <p class="text-stone-700 text-sm leading-relaxed mb-3">${art.summary || ''}</p>
-                  <div class="bg-stone-200/80 p-2 text-xs text-stone-800 rounded-sm border-l-2 border-stone-900">
-                    <strong>Lernwert:</strong> ${art.takeaway || ''}
-                  </div>
-                </article>
-              `;
+          if(data[cat.key]) {
+            data[cat.key].forEach((art, idx) => {
+              allArticles.push({
+                id: cat.key + '-' + idx,
+                catKey: cat.key,
+                categoryLabel: cat.label,
+                source: art.source || 'Redaktion',
+                title: art.title,
+                summary: art.summary,
+                takeaway: art.takeaway || '',
+                url: art.link || '#'
+              });
             });
-            container.appendChild(col);
           }
         });
+
+        // 3. LAYOUT BEFÜLLEN
+        let leftSidebarHtml = '';
+        let rightSidebarHtml = '';
+        let gridHtml = '';
+        
+        let leftCount = 0;
+        let rightCount = 0;
+
+        allArticles.forEach(art => {
+          // Die ersten 3 Artikel kommen nach Links
+          if (leftCount < 3 && (art.catKey === 'med_ai' || art.catKey === 'ai' || art.catKey === 'geopolitik')) {
+            leftSidebarHtml += renderSmallArticle(art, false);
+            leftCount++;
+          } 
+          // Die ersten 2 Sport-Artikel kommen nach Rechts
+          else if (rightCount < 2 && (art.catKey === 'rapid' || art.catKey === 'darts')) {
+            rightSidebarHtml += renderSmallArticle(art, true);
+            rightCount++;
+          } 
+          // Der Rest wandert in das große Raster unten
+          else {
+            gridHtml += `
+              <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] lg:border-r lg:border-[var(--rule-light)] lg:pr-5 group cursor-pointer" onclick="openReaderModal('${art.id}')">
+                <div>
+                  <div class="font-mono-meta text-[10px] uppercase tracking-wider mb-1.5 text-[var(--accent-red)] font-bold">${art.categoryLabel}</div>
+                  <h3 class="font-masthead text-xl font-bold leading-snug group-hover:underline text-[var(--ink-primary)]">${art.title}</h3>
+                  <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${art.summary}</p>
+                </div>
+                <div class="mt-4 pt-2 hairline-top font-mono-meta text-[10px] text-[var(--ink-muted)]">
+                  <span class="uppercase font-semibold group-hover:text-[var(--accent-red)]">Artikel lesen →</span>
+                </div>
+              </article>
+            `;
+          }
+        });
+
+        document.getElementById('left-sidebar-content').innerHTML = leftSidebarHtml || 'Keine Kurzmeldungen.';
+        document.getElementById('right-sidebar-content').innerHTML = rightSidebarHtml || 'Keine Sport-Updates.';
+        document.getElementById('newspaperArticlesGrid').innerHTML = gridHtml;
+
+        // 4. AUDIO PODCAST (Generiert Sprechtext aus echten Daten)
+        BRIEFING_CHAPTERS = [
+          { title: 'KI & Geopolitik', text: 'Guten Morgen. Das Wichtigste aus IT und Weltpolitik: ' + (data.ai?.[0]?.summary || '') + ' ' + (data.geopolitik?.[0]?.summary || '') },
+          { title: 'Sport kompakt', text: 'Kommen wir zum Sport. ' + (data.rapid?.[0]?.summary || '') + ' ' + (data.darts?.[0]?.summary || '') }
+        ];
+
       })
       .catch(err => {
-        document.getElementById('sync-status').innerText = "Offline / Ladefehler";
-        document.getElementById('sync-status').className = "text-red-700 font-bold";
-        document.getElementById('error-box').classList.remove('hidden');
-        document.getElementById('error-msg').innerText = err.message;
+        document.getElementById('sync-status').innerText = 'Offline / Ladefehler';
+        document.getElementById('sync-status').className = 'text-[#8F241E] font-bold';
       });
+
+    // INTERAKTIONEN
+    function openReaderModal(id) {
+      const art = allArticles.find(a => a.id === id);
+      if(!art) return;
+      document.getElementById('modalCategory').textContent = art.categoryLabel;
+      document.getElementById('modalMeta').textContent = art.source;
+      document.getElementById('modalTitle').textContent = art.title;
+      document.getElementById('modalBullets').innerHTML = `<li>${art.takeaway}</li>`;
+      document.getElementById('modalBody').innerHTML = `<p class="drop-cap">${art.summary}</p>`;
+      document.getElementById('modalExternalLink').href = art.url;
+      document.getElementById('readerModal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeReaderModal() {
+      document.getElementById('readerModal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // AUDIO LOGIK
+    function toggleAudioBriefing() {
+      if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
+      if (isPlayingAudio) { stopAudioBriefing(); } 
+      else { playSpecificChapter(0); }
+    }
+
+    function playSpecificChapter(index) {
+      if (!('speechSynthesis' in window) || !BRIEFING_CHAPTERS[index]) return;
+      window.speechSynthesis.cancel();
+      clearInterval(progressInterval);
+
+      currentChapterIndex = index;
+      isPlayingAudio = true;
+      document.getElementById('playIcon').textContent = '⏸';
+      document.getElementById('audioEarBox').classList.add('playing');
+      document.getElementById('audioTrackTitle').textContent = 'Liest: ' + BRIEFING_CHAPTERS[index].title;
+
+      const utterance = new SpeechSynthesisUtterance(BRIEFING_CHAPTERS[index].text);
+      utterance.lang = 'de-DE';
+      utterance.rate = 1.1;
+
+      let progress = 5;
+      document.getElementById('audioProgressBar').style.width = `${progress}%`;
+      progressInterval = setInterval(() => {
+        if (progress < 95) { progress += 2; document.getElementById('audioProgressBar').style.width = `${progress}%`; }
+      }, 450);
+
+      utterance.onend = () => {
+        if (currentChapterIndex + 1 < BRIEFING_CHAPTERS.length) {
+          setTimeout(() => playSpecificChapter(currentChapterIndex + 1), 500);
+        } else { stopAudioBriefing(); }
+      };
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopAudioBriefing() {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      clearInterval(progressInterval);
+      isPlayingAudio = false;
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('audioEarBox').classList.remove('playing');
+      document.getElementById('audioTrackTitle').textContent = 'Tages-Briefing abspielen';
+      document.getElementById('audioProgressBar').style.width = '0%';
+    }
+
+    // THEME & NAMEN
+    function toggleDarkInk() {
+      const isDark = document.documentElement.classList.toggle('dark-ink');
+      document.getElementById('themeIcon').textContent = isDark ? '☀' : '☾';
+      document.getElementById('themeLabel').textContent = isDark ? 'Tagespapier' : 'Abenddruck';
+    }
+
+    function handlePaperNameChange(val) {
+      const title = val.split('|')[0];
+      document.getElementById('mastheadTitle').textContent = title;
+      document.title = `${title} — Persönliche Tagesausgabe`;
+    }
   </script>
 </body>
 </html>
