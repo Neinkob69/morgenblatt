@@ -134,6 +134,20 @@
     html:not([data-view="carousel"]) #viewCarousel { display: none; }
     html[data-view="carousel"] body { padding-bottom: 0; overflow: hidden; }
 
+
+    /* ───────── Rätselecke ───────── */
+    .sudoku-grid { display: grid; grid-template-columns: repeat(9, 1fr); width: 100%; max-width: 440px; aspect-ratio: 1; border: 2px solid var(--rule-heavy); user-select: none; -webkit-user-select: none; }
+    .sd-cell { display: flex; align-items: center; justify-content: center; border: 1px solid var(--rule-light); background: var(--paper-bg); font-family: 'Playfair Display', Georgia, serif; font-size: clamp(17px, 4.6vw, 26px); color: var(--accent-red); line-height: 1; }
+    .sd-cell.given { color: var(--ink-primary); font-weight: 800; }
+    .sd-cell:nth-child(9n+3), .sd-cell:nth-child(9n+6) { border-right: 2px solid var(--rule-heavy); }
+    .sd-cell:nth-child(n+19):nth-child(-n+27), .sd-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--rule-heavy); }
+    .sd-cell.peer { background: var(--paper-elevated); }
+    .sd-cell.same { background: var(--paper-highlight); }
+    .sd-cell.sel { background: color-mix(in srgb, var(--accent-red) 20%, var(--paper-bg)); }
+    .sd-cell.wrong { color: #d11f1f; text-decoration: underline wavy; }
+    .sudoku-pad { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; max-width: 440px; margin-top: 10px; }
+    .sudoku-pad button { border: 1px solid var(--rule-light); padding: 9px 0; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    .sudoku-pad button:hover { border-color: var(--rule-heavy); }
     /* ───────── KARUSSELL (wie die Song-Auswahl bei SingStar) ───────── */
     #viewCarousel { --cr: #8F241E; --card-w: min(58vw, 36vh, 300px); position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; overflow: hidden; color: #f4f1ea; background: #0c0b0a; font-family: 'Newsreader', Georgia, serif; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
     .cr-backdrop { position: absolute; inset: -12%; background-size: cover; background-position: center; filter: blur(50px) saturate(1.4) brightness(.32); transition: background-image .6s ease; }
@@ -282,6 +296,9 @@
         <span class="text-[var(--rule-light)]">|</span>
         <button onclick="toggleSourcesModal(true)" class="hover:underline text-[var(--ink-secondary)] hidden sm:inline">Quellen & App</button>
         <span class="text-[var(--rule-light)] hidden sm:inline">|</span>
+        <button id="savedBtn" onclick="setView('paper'); setSection('saved')" class="hidden flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition" title="Merkliste">
+          <span>★</span><span id="savedCount">0</span>
+        </button>
         <button onclick="setView('carousel')" class="flex items-center gap-1 px-2 py-0.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] transition" title="Karussell">
           <span>◎</span><span class="hidden sm:inline">Karussell</span>
         </button>
@@ -418,6 +435,12 @@
       </div>
     </section>
 
+    <!-- WOCHENENDE: Die Woche (Sonntag) & lange Lesestücke -->
+    <div id="frontExtras">
+      <section id="weekBlock" class="hidden mt-8 pb-8 double-rule-bottom"></section>
+      <section id="longreadsBlock" class="hidden mt-8 pb-8 double-rule-bottom"></section>
+    </div>
+
     <!-- ALLE ARTIKEL -->
     <section class="mt-8">
       <!-- Suchleiste -->
@@ -495,9 +518,10 @@
       <div class="cr-actions">
         <button class="cr-action primary" onclick="carouselOpen()">Lesen →</button>
         <button class="cr-action" id="crPreviewBtn" onclick="togglePreview()">▶ Hörprobe</button>
+        <button class="cr-action" id="crSaveBtn" onclick="carouselToggleSave()">☆ Merken</button>
       </div>
     </div>
-    <div class="cr-foot"><span class="cr-hint">← → blättern · ↑ ↓ Ressort · ⏎ lesen · R Zufall</span><span id="crCount"></span></div>
+    <div class="cr-foot"><span class="cr-hint">← → blättern · ↑ ↓ Ressort · ⏎ lesen · M merken · R Zufall</span><span id="crCount"></span></div>
   </div>
 
   <!-- NANO-MODUS -->
@@ -544,6 +568,7 @@
       <div class="flex items-center justify-between gap-2 pb-3 double-rule-bottom mb-6">
         <div class="font-mono-meta text-xs uppercase tracking-widest text-[var(--accent-red)] font-bold truncate" id="modalCategory">RESSORT</div>
         <div class="flex items-center gap-1.5 shrink-0">
+          <button id="modalSave" onclick="toggleSaved(readerId)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] whitespace-nowrap" title="Für später merken">☆ Merken</button>
           <button id="modalPrev" onclick="stepReader(-1)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] disabled:opacity-30" title="Vorheriger Artikel (←)">←</button>
           <button id="modalNext" onclick="stepReader(1)" class="font-mono-meta text-xs font-bold px-2 py-1 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)] disabled:opacity-30" title="Nächster Artikel (→)">→</button>
           <button onclick="closeReader()" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕ <span class="hidden sm:inline">Schließen</span></button>
@@ -557,6 +582,7 @@
         <p id="modalSummary" class="text-[15px] font-serif-body text-[var(--ink-primary)] leading-relaxed"></p>
         <p id="modalTakeaway" class="text-sm font-serif-body italic text-[var(--ink-secondary)] mt-2 pt-2 hairline-top"></p>
       </div>
+      <div id="modalRelated" class="hidden my-4 text-sm font-serif-body text-[var(--ink-secondary)]"></div>
       <div id="modalAudio" class="my-4"></div>
       <figure id="modalFigure" class="my-5"></figure>
       <div id="modalBody" class="article-body font-serif-body text-lg leading-relaxed text-[var(--ink-primary)]"></div>
@@ -615,7 +641,7 @@
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
     const shorten = (s, n) => (s && s.length > n) ? s.slice(0, n).replace(/\s+\S*$/, '') + ' …' : (s || '');
-    const sectionLabel = sec => sec ? `${ROMAN[sections.indexOf(sec)] || ''}. ${sec.name}` : '';
+    const sectionLabel = sec => !sec ? '' : sections.includes(sec) ? `${ROMAN[sections.indexOf(sec)]}. ${sec.name}` : sec.name;
     const pageOf = sec => sections.indexOf(sec) + 2;
     const accentOf = sec => sec && sec.color === 'gruen' ? 'var(--accent-green)' : 'var(--accent-red)';
     const byDate = (a, b) => (b.published || '').localeCompare(a.published || '');
@@ -764,7 +790,7 @@
       byId = Object.fromEntries(articles.map(a => [a.id, a]));
       currentSection = 'all';
       $('#keywordSearchInput').value = '';
-      $('#frontPageSpread').classList.remove('hidden');
+      ['#frontPageSpread', '#frontExtras'].forEach(el => $(el).classList.remove('hidden'));
 
       // Kopfzeile: Datum & Stand der Ausgabe
       const created = new Date(data.generated_at);
@@ -781,7 +807,8 @@
       } else {
         status.innerText = `Ausgabe ${created.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })} ✓`;
       }
-      $('#editionBadge').innerText = `Ausgabe Wien • ${data.ai ? 'KI Kuratiert' : 'ohne KI-Redaktion'}${data.private ? ' • Privat' : ''}`;
+      const weekendEdition = data.date && [0, 6].includes(new Date(data.date + 'T12:00:00').getDay());
+      $('#editionBadge').innerText = `${weekendEdition ? 'Wochenendausgabe' : 'Ausgabe Wien'} • ${data.ai ? 'KI Kuratiert' : 'ohne KI-Redaktion'}${data.private ? ' • Privat' : ''}`;
       $('#editionCount').innerText = `${articles.length} MELDUNGEN`;
 
       applyPaperName(store.get('paperName', $('#paperNameSelect').options[0].value));
@@ -792,6 +819,7 @@
       renderChapterPills();
       renderSources();
       renderArchiveSelect();
+      updateSavedUI();
       updateAudioUI();
       if (document.documentElement.dataset.view === 'nano') nanoStart();
       if (document.documentElement.dataset.view === 'carousel') carouselStart();
@@ -803,7 +831,8 @@
 
     // ───────── Navigation (Ressorts) ─────────
     function renderNav() {
-      const items = [{ id: 'all', name: 'Titelseite', short: 'Seite 1', icon: '📰' }, ...sections];
+      const items = [{ id: 'all', name: 'Titelseite', short: 'Seite 1', icon: '📰' }, ...sections,
+        ...(edition.puzzles ? [{ id: 'raetsel', name: 'Rätsel', short: 'Rätsel', icon: '🧩' }] : [])];
       $('#sectionNav').innerHTML = `<div class="flex items-center gap-1 sm:gap-5 shrink-0">` + items.map((s, i) => `
         ${i ? '<span class="text-[var(--rule-light)]">/</span>' : ''}
         <button onclick="setSection('${s.id}')" data-sec="${s.id}" class="sec-nav-btn hover:text-[var(--accent-red)] px-1.5 py-0.5">${esc(s.id === 'all' ? s.name : s.short)}</button>`).join('') + `</div>`;
@@ -824,7 +853,7 @@
     function setSection(sec) {
       currentSection = sec;
       $('#keywordSearchInput').value = '';
-      $('#frontPageSpread').classList.toggle('hidden', sec !== 'all');
+      ['#frontPageSpread', '#frontExtras'].forEach(el => $(el).classList.toggle('hidden', sec !== 'all'));
       renderArticles();
       markActiveSection();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -872,9 +901,9 @@
       $('#telegramBox').classList.toggle('hidden', !telegramSections.length);
       $('#telegramTitle').innerText = edition.telegram?.titel || 'Telegramm';
       $('#telegramSubtitle').innerText = edition.telegram?.unterzeile || telegramSections.map(s => s.short).join(' & ');
-      $('#rightSidebarContent').innerHTML = telegramSections
+      $('#rightSidebarContent').innerHTML = renderFootballMini() + (telegramSections
         .flatMap(s => articles.filter(a => a.section === s.id).slice(0, 2))
-        .map(a => renderSmallArticle(a, true)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Meldungen.</div>';
+        .map(a => renderSmallArticle(a, true)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Meldungen.</div>');
     }
 
     function openLead() {
@@ -950,6 +979,8 @@
       }
       if (t.fact) parts.push(`<div class="pt-3 hairline-top">${label('Fakt des Tages')}<p class="font-serif-body italic leading-snug mt-0.5">${esc(t.fact.text)}</p></div>`);
       if (t.name_days?.length) parts.push(`<div class="pt-3 hairline-top font-mono-meta text-[11px] text-[var(--ink-secondary)]">Namenstag: ${esc(t.name_days.join(', '))}</div>`);
+      const pz = edition.puzzles;
+      if (pz) parts.push(`<button onclick="setSection('raetsel')" class="block w-full text-left pt-3 hairline-top group">${label('Rätselecke')}<span class="font-serif-body group-hover:underline">${pz.sudoku ? `Sudoku (${esc(pz.sudoku.level)})` : ''}${pz.sudoku && pz.quiz?.length ? ' · ' : ''}${pz.quiz?.length ? `${pz.quiz.length} Fragen zur Ausgabe` : ''} →</span></button>`);
       $('#dayContent').innerHTML = parts.join('');
     }
 
@@ -957,13 +988,293 @@
       renderWeather();
       renderMarkets();
       renderDay();
+      renderWeekend();
+    }
+
+    // ───────── Fußball: Spielplan & Tabelle ─────────
+    function fmtKickoff(iso) {
+      const d = new Date(iso);
+      const zone = { timeZone: 'Europe/Vienna' };   // Anstoß immer in Wiener Zeit, auch im Urlaub
+      return `${d.toLocaleDateString('de-AT', { ...zone, weekday: 'short', day: 'numeric', month: 'numeric' })}, ${d.toLocaleTimeString('de-AT', { ...zone, hour: '2-digit', minute: '2-digit' })}`;
+    }
+    const teamRow = () => (edition.football?.tables || []).flatMap(t => t.rows).find(r => r.is_team);
+    const resultColor = r => r === 'S' ? 'var(--accent-green)' : r === 'N' ? 'var(--accent-red)' : 'var(--ink-muted)';
+
+    function renderFootballMini() {
+      const fb = edition.football;
+      if (!fb) return '';
+      const next = fb.fixtures?.[0], last = fb.results?.[0], row = teamRow();
+      return `
+        <div class="pb-3 hairline-bottom cursor-pointer group" onclick="setSection('${esc(fb.section)}')">
+          <div class="font-mono-meta text-[10px] uppercase tracking-wider font-semibold" style="color:var(--accent-green)">${esc(fb.team)}${row ? ` · Platz ${esc(row.rank)} · ${esc(row.points)} Pkt.` : ''}</div>
+          ${next ? `<div class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${esc(next.home)} – ${esc(next.away)}</div>
+            <div class="text-sm text-[var(--ink-secondary)]">${esc(fmtKickoff(next.date))} · ${esc(next.competition)}</div>` : ''}
+          ${last ? `<div class="font-mono-meta text-[11px] mt-1">Zuletzt: ${esc(last.home)} – ${esc(last.away)} <b style="color:${resultColor(last.result)}">${esc(last.score)}</b></div>` : ''}
+        </div>`;
+    }
+
+    function renderFootball() {
+      const fb = edition.football;
+      if (!fb) return '';
+      const heading = text => `<div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mt-3 mb-1">${text}</div>`;
+      const match = m => `
+        <div class="flex justify-between gap-3 py-1 hairline-bottom">
+          <span class="truncate">${esc(fmtKickoff(m.date))} · ${esc(m.home)} – ${esc(m.away)}</span>
+          <span class="whitespace-nowrap">${m.score ? `<b style="color:${resultColor(m.result)}">${esc(m.score)}</b>` : `<span class="text-[var(--ink-muted)]">${esc(m.competition)}</span>`}</span>
+        </div>`;
+      const tables = (fb.tables || []).map(t => `
+        ${heading(esc(t.name))}
+        <table class="w-full font-mono-meta text-[12px]">
+          <thead><tr class="text-[var(--ink-muted)] text-left"><th class="font-normal w-6">#</th><th class="font-normal">Verein</th><th class="font-normal text-right">Sp</th><th class="font-normal text-right hidden sm:table-cell">S-U-N</th><th class="font-normal text-right">Diff</th><th class="font-normal text-right">Pkt</th></tr></thead>
+          <tbody>${t.rows.map(r => `
+            <tr class="${r.is_team ? 'font-bold' : ''}" style="${r.is_team ? 'color:var(--accent-green)' : ''}">
+              <td>${esc(r.rank)}</td><td>${esc(r.team)}</td><td class="text-right">${esc(r.played ?? '')}</td>
+              <td class="text-right hidden sm:table-cell">${esc([r.won, r.drawn, r.lost].filter(v => v != null).join('-'))}</td>
+              <td class="text-right">${esc(r.diff ?? '')}</td><td class="text-right">${esc(r.points)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`).join('');
+      return `
+        <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)]/50 p-3.5 mb-8">
+          <div class="flex items-center justify-between gap-3 border-b border-[var(--rule-heavy)] pb-1.5 mb-1">
+            <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">${esc(fb.team)} · Spielplan & Tabelle</span>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">Daten: ESPN</span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 font-mono-meta text-[12px]">
+            <div>${heading('Nächste Spiele')}${(fb.fixtures || []).slice(0, 4).map(match).join('') || '<div class="text-[var(--ink-muted)]">Keine Termine.</div>'}
+                 ${heading('Letzte Ergebnisse')}${(fb.results || []).slice(0, 4).map(match).join('')}</div>
+            <div>${tables}</div>
+          </div>
+        </div>`;
+    }
+
+    // ───────── Wochenende: Die Woche & lange Lesestücke ─────────
+    function renderWeekend() {
+      const week = edition.week;
+      $('#weekBlock').classList.toggle('hidden', !week);
+      if (week) {
+        const range = [week.from, week.to].filter(Boolean).map(fmtShortDate).join(' – ');
+        const story = week.story;
+        $('#weekBlock').innerHTML = `
+          <div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-4">
+            <h3 class="font-masthead text-3xl font-black">Die Woche</h3>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">${esc(range)}</span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-7">
+              ${week.intro ? `<p class="font-serif-body italic text-lg text-[var(--ink-secondary)] leading-snug mb-4">${esc(week.intro)}</p>` : ''}
+              ${story ? `<div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)]">Geschichte der Woche</div>
+                <h4 class="font-masthead text-2xl font-bold leading-tight mt-1 mb-2">${esc(story.headline)}</h4>
+                <div class="newspaper-columns-2 text-[15px] leading-relaxed">${(story.text || '').split(/\n\s*\n/).filter(Boolean).map(p => `<p class="mb-3">${esc(p)}</p>`).join('')}</div>` : ''}
+              ${(week.sections || []).length ? `<div class="grid sm:grid-cols-2 gap-4 mt-4">${week.sections.map(x => `
+                <div><div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold" style="color:${accentOf(sectionById[x.section])}">${esc(sectionById[x.section]?.name || '')}</div>
+                <ul class="list-disc pl-4 text-sm mt-1 space-y-1">${x.points.map(pt => `<li>${esc(pt)}</li>`).join('')}</ul></div>`).join('')}</div>` : ''}
+            </div>
+            <div class="lg:col-span-5 lg:border-l lg:border-[var(--rule-light)] lg:pl-6">
+              <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mb-2">Die Aufmacher der Woche</div>
+              ${(week.days || []).map(d => `
+                <button onclick="openArchiveDay('${esc(d.date)}')" class="block w-full text-left py-2 hairline-bottom group">
+                  <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">${esc(fmtShortDate(d.date))}</span>
+                  <span class="block font-masthead font-bold leading-snug group-hover:underline">${esc(d.headline)}</span>
+                </button>`).join('')}
+            </div>
+          </div>`;
+      }
+      const longreads = (edition.weekend?.longreads || []).map(id => byId[id]).filter(Boolean);
+      $('#longreadsBlock').classList.toggle('hidden', !longreads.length);
+      if (longreads.length) {
+        $('#longreadsBlock').innerHTML = `
+          <div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-5">
+            <h3 class="font-masthead text-2xl font-bold whitespace-nowrap">Fürs Wochenende</h3>
+            <span class="font-mono-meta text-[10px] uppercase text-right text-[var(--ink-muted)]">Die langen Stücke der Woche</span>
+          </div>
+          ${renderGrid(longreads, { showSection: true })}`;
+      }
+    }
+
+    function openArchiveDay(date) {
+      if (date === latestDate) return showEdition(CURRENT);
+      const entry = archiveList.find(e => e.date === date);
+      if (entry) showEdition(entry.file);
+    }
+
+    // ───────── Rätselecke: Sudoku & Quiz ─────────
+    function renderPuzzles() {
+      const pz = edition.puzzles || {};
+      const head = (title, extra) => `<div class="flex items-baseline justify-between gap-3 bold-rule-top pt-2 mb-4"><h3 class="font-masthead text-2xl font-bold">${title}</h3><span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">${extra}</span></div>`;
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          ${pz.sudoku ? `<div>${head('Sudoku des Tages', `${esc(pz.sudoku.level)} · <span id="sudokuTimer">0:00</span>`)}<div id="sudokuBoard"></div></div>` : ''}
+          ${pz.quiz?.length ? `<div>${head('Hast du die Zeitung gelesen?', '<span id="quizScore"></span>')}<div id="quizBox"></div></div>` : ''}
+        </div>`;
+    }
+
+    const sudoku = { cells: [], given: [], solution: [], sel: -1, key: '', started: 0, elapsed: 0, solved: false, timer: null };
+    const fmtDuration = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+
+    function setupSudoku() {
+      const sd = edition.puzzles?.sudoku;
+      if (!sd || !$('#sudokuBoard')) return;
+      sudoku.key = `sudoku-${edition.date}`;
+      sudoku.given = [...sd.puzzle].map(Number);
+      sudoku.solution = [...sd.solution].map(Number);
+      let state = null;
+      try { state = JSON.parse(localStorage.getItem(sudoku.key)); } catch (e) {}
+      sudoku.cells = state?.cells?.length === 81 ? state.cells : [...sudoku.given];
+      sudoku.started = state?.started || Date.now();
+      sudoku.elapsed = state?.elapsed || 0;
+      sudoku.solved = !!state?.solved;
+      sudoku.sel = -1;
+      renderSudoku();
+      clearInterval(sudoku.timer);
+      sudoku.timer = setInterval(updateSudokuTimer, 1000);
+      updateSudokuTimer();
+    }
+
+    function saveSudoku() {
+      try { localStorage.setItem(sudoku.key, JSON.stringify({ cells: sudoku.cells, started: sudoku.started, elapsed: sudoku.elapsed, solved: sudoku.solved })); } catch (e) {}
+    }
+
+    function renderSudoku(wrong = []) {
+      const board = $('#sudokuBoard');
+      if (!board) return;
+      const btn = 'px-3 py-1.5 border border-[var(--rule-light)] hover:border-[var(--rule-heavy)]';
+      board.innerHTML = `
+        <div class="sudoku-grid">${sudoku.cells.map((v, i) => `<button class="sd-cell${sudoku.given[i] ? ' given' : ''}${wrong.includes(i) ? ' wrong' : ''}" data-i="${i}" onclick="selectSudoku(${i})">${v || ''}</button>`).join('')}</div>
+        <div class="sudoku-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button onclick="enterSudoku(${n})">${n}</button>`).join('')}<button onclick="enterSudoku(0)" title="Löschen">⌫</button></div>
+        <div class="flex flex-wrap gap-2 mt-3 font-mono-meta text-[11px] uppercase">
+          <button onclick="checkSudoku()" class="${btn}">Prüfen</button>
+          <button onclick="revealSudoku()" class="${btn}">Lösung zeigen</button>
+          <button onclick="resetSudoku()" class="${btn}">Von vorn</button>
+        </div>
+        <div id="sudokuMsg" class="font-mono-meta text-[11px] mt-2 min-h-[1.2em]">${sudoku.solved ? `Gelöst in ${fmtDuration(sudoku.elapsed)} 🎉` : ''}</div>`;
+      highlightSudoku();
+    }
+
+    function highlightSudoku() {
+      const sel = sudoku.sel;
+      const value = sel >= 0 ? sudoku.cells[sel] : 0;
+      document.querySelectorAll('.sd-cell').forEach(el => {
+        const i = +el.dataset.i;
+        const peer = sel >= 0 && (Math.floor(i / 9) === Math.floor(sel / 9) || i % 9 === sel % 9 ||
+          (Math.floor(i / 27) === Math.floor(sel / 27) && Math.floor((i % 9) / 3) === Math.floor((sel % 9) / 3)));
+        el.classList.toggle('sel', i === sel);
+        el.classList.toggle('peer', peer && i !== sel);
+        el.classList.toggle('same', !!value && sudoku.cells[i] === value && i !== sel);
+      });
+    }
+
+    function selectSudoku(i) {
+      sudoku.sel = i;
+      highlightSudoku();
+    }
+
+    function enterSudoku(n) {
+      const i = sudoku.sel;
+      if (i < 0 || sudoku.given[i] || sudoku.solved) return;
+      sudoku.cells[i] = n;
+      if (sudoku.cells.every((v, k) => v === sudoku.solution[k])) {
+        sudoku.solved = true;
+        sudoku.elapsed = Date.now() - sudoku.started;
+      }
+      saveSudoku();
+      renderSudoku();
+    }
+
+    function checkSudoku() {
+      const wrong = sudoku.cells.map((v, i) => (v && v !== sudoku.solution[i] ? i : -1)).filter(i => i >= 0);
+      renderSudoku(wrong);
+      $('#sudokuMsg').textContent = wrong.length ? `${wrong.length} ${wrong.length === 1 ? 'Feld stimmt' : 'Felder stimmen'} nicht.` : 'Bisher alles richtig.';
+    }
+
+    function revealSudoku() {
+      if (!confirm('Lösung wirklich zeigen?')) return;
+      sudoku.cells = [...sudoku.solution];
+      sudoku.solved = true;
+      sudoku.elapsed = Date.now() - sudoku.started;
+      saveSudoku();
+      renderSudoku();
+      $('#sudokuMsg').textContent = 'Lösung eingeblendet.';
+    }
+
+    function resetSudoku() {
+      sudoku.cells = [...sudoku.given];
+      sudoku.started = Date.now();
+      sudoku.solved = false;
+      sudoku.elapsed = 0;
+      saveSudoku();
+      renderSudoku();
+    }
+
+    function updateSudokuTimer() {
+      const el = $('#sudokuTimer');
+      if (el) el.textContent = fmtDuration(sudoku.solved ? sudoku.elapsed : Date.now() - sudoku.started);
+    }
+
+    // Tastatur: Ziffern eintragen, Pfeile wandern, ⌫ löscht
+    function sudokuKey(e) {
+      if (sudoku.sel < 0 || e.target.closest('input, select, textarea')) return false;
+      const moves = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 };
+      if (/^[1-9]$/.test(e.key)) enterSudoku(+e.key);
+      else if (['Backspace', 'Delete', '0'].includes(e.key)) enterSudoku(0);
+      else if (moves[e.key]) selectSudoku(Math.min(80, Math.max(0, sudoku.sel + moves[e.key])));
+      else return false;
+      e.preventDefault();
+      return true;
+    }
+
+    function quizState() {
+      try { return JSON.parse(localStorage.getItem(`quiz-${edition.date}`)) || {}; } catch (e) { return {}; }
+    }
+
+    function answerQuiz(qi, ai) {
+      const state = quizState();
+      if (state[qi] != null) return;
+      state[qi] = ai;
+      try { localStorage.setItem(`quiz-${edition.date}`, JSON.stringify(state)); } catch (e) {}
+      renderQuiz();
+    }
+
+    function quizVerdict(right, total) {
+      if (right === total) return 'Volle Punktzahl – Zeitungsleser:in des Tages! 🏆';
+      return right >= total / 2 ? 'Gut informiert.' : 'Morgen wieder – oder gleich die Artikel nachlesen.';
+    }
+
+    function renderQuiz() {
+      const box = $('#quizBox');
+      if (!box) return;
+      const quiz = edition.puzzles?.quiz || [];
+      const state = quizState();
+      box.innerHTML = quiz.map((q, qi) => {
+        const given = state[qi];
+        const answers = q.answers.map((answer, ai) => {
+          let style = 'border-[var(--rule-light)] hover:border-[var(--rule-heavy)]';
+          if (given != null) {
+            style = ai === q.correct ? 'border-[var(--accent-green)] text-[var(--accent-green)] font-bold'
+              : ai === given ? 'border-[var(--accent-red)] text-[var(--accent-red)] line-through' : 'border-[var(--rule-light)] opacity-60';
+          }
+          return `<button ${given != null ? 'disabled' : ''} onclick="answerQuiz(${qi}, ${ai})" class="text-left px-3 py-2 border ${style} font-serif-body">${esc(answer)}</button>`;
+        }).join('');
+        return `
+          <div class="py-3 hairline-bottom">
+            <div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Frage ${qi + 1} von ${quiz.length}</div>
+            <div class="font-masthead font-bold text-lg leading-snug mt-1 mb-2">${esc(q.question)}</div>
+            <div class="grid gap-1.5">${answers}</div>
+            ${given != null ? `<div class="text-sm mt-2">${given === q.correct ? '✓ Richtig!' : '✗ Leider nicht.'} ${esc(q.explanation || '')}
+              ${findArticle(q.article) ? `<button onclick="openReader('${esc(q.article)}')" class="underline font-mono-meta text-[11px] uppercase ml-1">Zum Artikel →</button>` : ''}</div>` : ''}
+          </div>`;
+      }).join('');
+      const done = Object.keys(state).length;
+      const right = quiz.filter((q, qi) => state[qi] === q.correct).length;
+      $('#quizScore').textContent = done ? `${right} von ${done} richtig` : `${quiz.length} Fragen`;
+      if (done === quiz.length && quiz.length) box.insertAdjacentHTML('beforeend', `<div class="font-masthead font-bold text-lg mt-4">${esc(quizVerdict(right, quiz.length))}</div>`);
     }
 
     // ───────── Artikel-Raster ─────────
     function renderCard(art, opts = {}) {
-      const sec = sectionById[art.section];
+      const sec = secOf(art);
       const img = opts.big && safeUrl(art.image);
-      const meta = [art.source, timeAgo(art.published)].filter(Boolean).join(' · ');
+      const meta = [art.source + (art.related?.length ? ` +${art.related.length}` : ''), timeAgo(art.published)].filter(Boolean).join(' · ');
       return `
         <article class="flex flex-col justify-between pb-6 border-b border-[var(--rule-light)] ${opts.ruleRight ? 'lg:border-r lg:border-[var(--rule-light)] lg:pr-5' : ''} ${opts.big ? 'md:col-span-2' : ''} group cursor-pointer" onclick="openReader('${art.id}')">
           <div>
@@ -973,7 +1284,7 @@
             <p class="font-serif-body text-[15px] text-[var(--ink-secondary)] mt-2 leading-relaxed">${esc(art.summary)}</p>
           </div>
           <div class="mt-4 pt-2 hairline-top flex items-center justify-between gap-2 font-mono-meta text-[10px] text-[var(--ink-muted)]">
-            <span class="truncate">${esc(meta)}</span>
+            <span class="truncate"><span data-save-mark="${art.id}" class="${isSaved(art.id) ? '' : 'hidden'} text-[var(--accent-red)]">★ </span>${esc(meta)}</span>
             <span class="uppercase font-semibold whitespace-nowrap text-[var(--ink-primary)] group-hover:text-[var(--accent-red)]">${art.full_text ? `${art.reading_minutes} Min. →` : 'Lesen →'}</span>
           </div>
         </article>
@@ -1013,30 +1324,94 @@
                 <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] whitespace-nowrap">S. ${pageOf(sec)} · ${list.length} Meldungen →</span>
               </div>
               ${sec.markets ? renderKurszettel() : ''}
+              ${edition.football?.section === sec.id ? renderFootball() : ''}
               ${renderGrid(list.slice(0, 7), { feature: true })}
             </section>`;
         }).join('');
+        return;
+      }
+      if (currentSection === 'raetsel') {
+        $('#activeSectionKicker').innerText = 'RÄTSELECKE';
+        $('#activeSectionHeading').innerText = '🧩 Rätsel';
+        target.innerHTML = renderPuzzles();
+        setupSudoku();
+        renderQuiz();
+        return;
+      }
+      if (currentSection === 'saved') {
+        $('#activeSectionKicker').innerText = `${saved.length} GEMERKT · AUF DIESEM GERÄT GESPEICHERT`;
+        $('#activeSectionHeading').innerText = '★ Merkliste';
+        target.innerHTML = renderGrid(saved, { showSection: true });
         return;
       }
       const sec = sectionById[currentSection];
       const list = articles.filter(a => a.section === sec.id);
       $('#activeSectionKicker').innerText = `SEITE ${pageOf(sec)} · ${list.length} MELDUNGEN`;
       $('#activeSectionHeading').innerText = sectionLabel(sec);
-      target.innerHTML = (sec.markets ? renderKurszettel() : '') +
+      target.innerHTML = (sec.markets ? renderKurszettel() : '') + (edition.football?.section === sec.id ? renderFootball() : '') +
         (list.length ? renderGrid(list, { feature: true }) : `<div class="py-12 text-center text-[var(--ink-muted)]">Heute nichts Neues in diesem Ressort.</div>`);
     }
 
     // Suche
     function filterArticlesByKeyword(query) {
-      if (query.trim() && currentSection === 'all') $('#frontPageSpread').classList.add('hidden');
-      if (!query.trim()) $('#frontPageSpread').classList.toggle('hidden', currentSection !== 'all');
+      ['#frontPageSpread', '#frontExtras'].forEach(el => $(el).classList.toggle('hidden', !!query.trim() || currentSection !== 'all'));
       renderArticles(query);
     }
     function resetFilters() { setSection('all'); }
 
+    // ───────── Merkliste (Später lesen) ─────────
+    // Gemerkte Artikel werden komplett auf dem Gerät gespeichert – so bleiben sie lesbar,
+    // auch wenn ihre Ausgabe längst aus dem Archiv gefallen ist.
+    const SAVED_KEY = 'merkliste';
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch (e) { saved = []; }
+    const isSaved = id => saved.some(a => a.id === id);
+    const findArticle = id => byId[id] || saved.find(a => a.id === id);
+
+    function secOf(art) {
+      return sectionById[art.section] || { id: art.section, name: art.sectionName || 'Gemerkt', short: art.sectionShort || 'Gemerkt', color: art.sectionColor || '', feeds: [] };
+    }
+
+    function persistSaved() {
+      try {
+        localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+      } catch (e) {
+        // Speicher voll: ohne Volltexte noch einmal versuchen, der Link zum Original bleibt
+        try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved.map(a => ({ ...a, content_html: '' })))); } catch (e2) {}
+      }
+    }
+
+    function toggleSaved(id) {
+      const art = findArticle(id);
+      if (!art) return;
+      if (isSaved(id)) {
+        saved = saved.filter(a => a.id !== id);
+      } else {
+        const sec = secOf(art);
+        saved.unshift({ ...art, sectionName: sec.name, sectionShort: sec.short, sectionColor: sec.color, savedAt: new Date().toISOString() });
+      }
+      persistSaved();
+      updateSavedUI();
+    }
+
+    function updateSavedUI() {
+      $('#savedBtn').classList.toggle('hidden', !saved.length);
+      $('#savedCount').textContent = saved.length;
+      if (readerId) $('#modalSave').textContent = isSaved(readerId) ? '★ Gemerkt' : '☆ Merken';
+      document.querySelectorAll('[data-save-mark]').forEach(el => el.classList.toggle('hidden', !isSaved(el.dataset.saveMark)));
+      if (currentSection === 'saved') saved.length ? renderArticles() : setSection('all');
+      carouselSavedChanged();
+    }
+
+    // Im Reader blättert ←/→ innerhalb des Ressorts – oder innerhalb der Merkliste, wenn man von dort kommt
+    function readerList(art) {
+      const fromSaved = currentSection === 'saved' || (document.documentElement.dataset.view === 'carousel' && carousel.filter === 'saved');
+      return fromSaved || !byId[art.id] ? saved : articles.filter(a => a.section === art.section);
+    }
+
     // ───────── Lesemodus ─────────
     function openReader(id, mode = 'push') {
-      const art = byId[id];
+      const art = findArticle(id);
       if (!art) return;
       renderReader(art);
       if (mode === 'push') { history.pushState({ reader: id }, '', '#a=' + id); readerPushed = true; }
@@ -1045,8 +1420,9 @@
 
     function renderReader(art) {
       readerId = art.id;
-      const sec = sectionById[art.section];
+      const sec = secOf(art);
       $('#modalCategory').textContent = sectionLabel(sec);
+      $('#modalSave').textContent = isSaved(art.id) ? '★ Gemerkt' : '☆ Merken';
       $('#modalMeta').textContent = [art.source, fmtDateTime(art.published), art.author, `${art.reading_minutes} Min. Lesezeit`].filter(Boolean).join(' · ');
       $('#modalTitle').textContent = art.headline;
       const differs = art.title && art.title !== art.headline;
@@ -1057,6 +1433,10 @@
       $('#modalSummary').textContent = art.summary;
       $('#modalTakeaway').textContent = art.takeaway;
 
+      const related = art.related || [];
+      $('#modalRelated').classList.toggle('hidden', !related.length);
+      $('#modalRelated').innerHTML = related.length ? '<span class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)]">Auch berichtet:</span> ' +
+        related.map(r => safeUrl(r.link) ? `<a href="${esc(r.link)}" target="_blank" rel="noopener noreferrer" class="underline" title="${esc(r.title)}">${esc(r.source)} ↗</a>` : esc(r.source)).join(' · ') : '';
       const audio = safeUrl(art.audio);
       $('#modalAudio').innerHTML = audio ? `<audio controls preload="none" src="${esc(audio)}" class="w-full"></audio>` : '';
       const img = safeUrl(art.image);
@@ -1073,8 +1453,8 @@
         : 'Öffentliche Ausgabe: hier steht nur ein Anriss. Den ganzen Text gibt\'s beim Original – oder in der privaten Ausgabe mit Passwort.';
       $('#modalExternalLink').href = safeUrl(art.link) || '#';
 
-      const list = articles.filter(a => a.section === art.section);
-      const idx = list.indexOf(art);
+      const list = readerList(art);
+      const idx = list.findIndex(a => a.id === art.id);
       $('#modalPrev').disabled = idx <= 0;
       $('#modalNext').disabled = idx >= list.length - 1;
 
@@ -1084,10 +1464,10 @@
     }
 
     function stepReader(dir) {
-      const art = byId[readerId];
+      const art = findArticle(readerId);
       if (!art) return;
-      const list = articles.filter(a => a.section === art.section);
-      const next = list[list.indexOf(art) + dir];
+      const list = readerList(art);
+      const next = list[list.findIndex(a => a.id === art.id) + dir];
       if (next) openReader(next.id, 'replace');
     }
 
@@ -1108,7 +1488,7 @@
     window.addEventListener('popstate', e => {
       const state = e.state || {};
       if (document.documentElement.dataset.view === 'nano') { nanoPopTo(state.nano || 1); return; }
-      if (state.reader && byId[state.reader]) { renderReader(byId[state.reader]); readerPushed = true; }
+      if (state.reader && findArticle(state.reader)) { renderReader(findArticle(state.reader)); readerPushed = true; }
       else { readerPushed = false; hideReader(); }
     });
 
@@ -1203,10 +1583,18 @@
         <button onclick="playSpecificChapter(${i})" class="chapter-pill px-1.5 py-0.5 hover:bg-[var(--paper-highlight)] text-left shrink-0 border-b-2 border-transparent">${String(i + 1).padStart(2, '0')} ${esc(c.title)}</button>`).join('');
     }
 
+    function germanVoices() {
+      const score = v => (/de-AT/i.test(v.lang) ? 4 : 0) + (/premium|enhanced|natural|neural/i.test(v.name) ? 2 : 0) + (v.localService ? 1 : 0);
+      return speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de')).sort((a, b) => score(b) - score(a));
+    }
     function germanVoice() {
-      const voices = speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('de'));
-      return voices.find(v => /de-AT/i.test(v.lang)) || voices.find(v => /premium|enhanced|natural|neural/i.test(v.name))
-        || voices.find(v => v.localService) || voices[0] || null;
+      return germanVoices()[0] || null;
+    }
+    // Zwei Sprecher im Browser: zweite deutsche Stimme – oder, wenn es nur eine gibt, etwas tiefer
+    function voiceFor(speaker) {
+      const voices = germanVoices();
+      const index = Math.max(0, (edition?.speakers || []).indexOf(speaker));
+      return { voice: voices[index % Math.max(1, voices.length)] || null, pitch: index && voices.length < 2 ? 0.8 : 1 };
     }
 
     // Lange Texte in Sätze-Häppchen teilen: Chrome bricht lange Utterances sonst nach ~15 s ab
@@ -1230,7 +1618,9 @@
       if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
       speechSynthesis.cancel();
       tts.idx = index;
-      tts.chunks = splitForSpeech(chapters()[index].text);
+      const ch = chapters()[index];
+      tts.chunks = (ch.lines?.length ? ch.lines : [{ speaker: null, text: ch.text }])
+        .flatMap(line => splitForSpeech(line.text).map(text => ({ text, speaker: line.speaker })));
       tts.chunk = 0;
       tts.playing = true;
       speakChunk();
@@ -1238,11 +1628,13 @@
 
     function speakChunk() {
       const token = ++tts.token;
-      const utterance = new SpeechSynthesisUtterance(tts.chunks[tts.chunk]);
-      const voice = germanVoice();
+      const chunk = tts.chunks[tts.chunk];
+      const utterance = new SpeechSynthesisUtterance(chunk.text);
+      const { voice, pitch } = voiceFor(chunk.speaker);
       if (voice) utterance.voice = voice;
       utterance.lang = voice?.lang || 'de-DE';
       utterance.rate = tts.rate;
+      utterance.pitch = pitch;
       utterance.onend = () => {
         if (token !== tts.token || !tts.playing) return;
         if (++tts.chunk < tts.chunks.length) speakChunk();
@@ -1366,6 +1758,7 @@
       const view = document.documentElement.dataset.view;
       if (view === 'nano') return nanoKey(e);
       if (view === 'carousel' && !readerId && !lockWaiter && $('#sourcesModal').classList.contains('hidden')) return carouselKey(e);
+      if (currentSection === 'raetsel' && !readerId && sudokuKey(e)) return;
       if (e.key === 'Escape') { closeReader(); toggleSourcesModal(false); }
       if (readerId && e.key === 'ArrowLeft') stepReader(-1);
       if (readerId && e.key === 'ArrowRight') stepReader(1);
@@ -1383,17 +1776,37 @@
     function carouselStart() {
       if (!edition) return;
       $('#crBrand').textContent = paperTitle();
-      $('#crChips').innerHTML = [{ id: 'all', short: 'Alle' }, ...sections].map(s =>
-        `<button class="cr-chip" data-filter="${s.id}" onclick="carouselFilter('${s.id}')">${esc(s.short)}</button>`).join('') +
-        '<button class="cr-chip" onclick="carouselShuffle()">🎲 Zufall</button>';
+      renderCarouselChips();
       $('#crAutoBtn').classList.toggle('is-on', store.get('crAuto', '0') === '1');
       renderDayLine();
-      carouselFilter(carousel.filter === 'all' || sectionById[carousel.filter] ? carousel.filter : 'all');
+      const valid = carousel.filter === 'all' || sectionById[carousel.filter] || (carousel.filter === 'saved' && saved.length);
+      carouselFilter(valid ? carousel.filter : 'all');
+    }
+
+    function renderCarouselChips() {
+      const chips = [{ id: 'all', short: 'Alle' }, ...sections, ...(saved.length ? [{ id: 'saved', short: '★ Merkliste' }] : [])];
+      $('#crChips').innerHTML = chips.map(s =>
+        `<button class="cr-chip" data-filter="${s.id}" onclick="carouselFilter('${s.id}')">${esc(s.short)}</button>`).join('') +
+        '<button class="cr-chip" onclick="carouselShuffle()">🎲 Zufall</button>';
+    }
+
+    function carouselToggleSave() {
+      const art = carousel.list[mod(carousel.pos, carousel.list.length)];
+      if (art) toggleSaved(art.id);
+    }
+
+    function carouselSavedChanged() {
+      if (document.documentElement.dataset.view !== 'carousel' || !edition) return;
+      const current = carousel.list[mod(carousel.pos, carousel.list.length)];
+      renderCarouselChips();
+      if (carousel.filter === 'saved') return carouselFilter(saved.length ? 'saved' : 'all');
+      document.querySelectorAll('.cr-chip[data-filter]').forEach(chip => chip.classList.toggle('is-on', chip.dataset.filter === carousel.filter));
+      if (current) $('#crSaveBtn').textContent = isSaved(current.id) ? '★ Gemerkt' : '☆ Merken';
     }
 
     function carouselFilter(id) {
       carousel.filter = id;
-      carousel.list = id === 'all' ? articles : articles.filter(a => a.section === id);
+      carousel.list = id === 'all' ? articles : id === 'saved' ? [...saved] : articles.filter(a => a.section === id);
       const lead = carousel.list.findIndex(a => a.id === edition.lead?.article);
       carousel.pos = id === 'all' && lead >= 0 ? lead : 0;
       carousel.cards.forEach(el => el.remove());
@@ -1410,7 +1823,7 @@
     }
 
     function buildCover(art, position) {
-      const sec = sectionById[art.section];
+      const sec = secOf(art);
       const img = safeUrl(art.image);
       const el = document.createElement('div');
       el.className = `cr-card${img ? '' : ' no-img'}`;
@@ -1471,8 +1884,9 @@
         ['#crMeta', '#crHeadline', '#crSummary', '#crCount'].forEach(sel => { $(sel).textContent = ''; });
         return;
       }
-      const sec = sectionById[art.section];
+      const sec = secOf(art);
       const img = safeUrl(art.image);
+      $('#crSaveBtn').textContent = isSaved(art.id) ? '★ Gemerkt' : '☆ Merken';
       $('#viewCarousel').style.setProperty('--cr', colorOf(sec));
       $('#crBackdrop').style.backgroundImage = img ? `url("${img.replace(/"/g, '%22')}")` : 'none';
       $('#crMeta').textContent = [sectionLabel(sec), art.source, timeAgo(art.published), art.full_text ? `${art.reading_minutes} Min.` : ''].filter(Boolean).join(' · ');
@@ -1511,7 +1925,7 @@
     }
 
     function carouselCycleFilter(dir) {
-      const ids = ['all', ...sections.map(s => s.id)];
+      const ids = ['all', ...sections.map(s => s.id), ...(saved.length ? ['saved'] : [])];
       carouselFilter(ids[mod(ids.indexOf(carousel.filter) + dir, ids.length)]);
     }
 
@@ -1551,7 +1965,7 @@
       const keys = {
         ArrowRight: () => carouselGo(1), ArrowLeft: () => carouselGo(-1),
         ArrowDown: () => carouselCycleFilter(1), ArrowUp: () => carouselCycleFilter(-1),
-        Enter: carouselOpen, ' ': togglePreview, r: carouselShuffle, R: carouselShuffle,
+        Enter: carouselOpen, ' ': togglePreview, r: carouselShuffle, R: carouselShuffle, m: carouselToggleSave, M: carouselToggleSave,
       };
       if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
     }
@@ -1635,7 +2049,12 @@
           { label: 'Alle Meldungen', go: () => nanoListPage('Alle Meldungen', [...articles].sort(byDate).map(a => a.id)) },
           { label: 'Hörausgabe', go: nanoBriefingPage },
           ...(articles.some(a => a.audio) ? [{ label: 'Podcast-Folgen', go: () => nanoListPage('Podcasts', articles.filter(a => a.audio).sort(byDate).map(a => a.id)) }] : []),
+          ...(saved.length ? [{ label: 'Merkliste', right: saved.length, go: () => nanoListPage('Merkliste', saved.map(a => a.id)) }] : []),
+          ...(edition.week ? [{ label: 'Die Woche', go: nanoWeekPage }] : []),
+          ...(edition.weekend?.longreads?.length ? [{ label: 'Fürs Wochenende', go: () => nanoListPage('Wochenende', edition.weekend.longreads.filter(id => byId[id])) }] : []),
           ...(edition.weather || edition.today ? [{ label: 'Wetter & Tag', go: nanoTodayPage }] : []),
+          ...(edition.football ? [{ label: edition.football.team, go: nanoFootballPage }] : []),
+          ...(edition.puzzles?.quiz?.length ? [{ label: 'Quiz', go: nanoQuizPage }] : []),
           ...(edition.markets?.length ? [{ label: 'Börse', go: nanoMarketsPage }] : []),
           ...(archiveList.length ? [{ label: 'Archiv', go: nanoArchivePage }] : []),
           { label: 'Einstellungen', go: nanoSettingsPage },
@@ -1660,14 +2079,75 @@
         title,
         empty: 'Heute nichts Neues.',
         build: () => ids.map(id => {
-          const a = byId[id];
+          const a = findArticle(id);
           return { label: a.headline, sub: [a.audio ? '🎧' : '', a.source, timeAgo(a.published)].filter(Boolean).join(' · '), twoLine: true, go: () => nanoArticlePage(id, ids) };
         }),
       };
     }
 
     function nanoArticlePage(id, ids) {
-      return { title: sectionById[byId[id].section].short, kind: 'article', id, ids };
+      return { title: secOf(findArticle(id)).short, kind: 'article', id, ids };
+    }
+
+    function nanoFootballPage() {
+      const info = (label, sub, right) => ({ label, sub, right, twoLine: !!sub, noChevron: true, go: () => {} });
+      return {
+        title: edition.football.team,
+        build: () => {
+          const fb = edition.football;
+          return [
+            ...(fb.fixtures || []).slice(0, 3).map(m => info(`${m.home} – ${m.away}`, `${fmtKickoff(m.date)} · ${m.competition}`)),
+            ...(fb.results || []).slice(0, 3).map(m => info(`${m.home} – ${m.away}`, '', m.score)),
+            ...(fb.tables || []).flatMap(t => t.rows).map(r => info(`${r.rank}. ${r.team}${r.is_team ? ' ●' : ''}`, '', `${r.points} Pkt.`)),
+          ];
+        },
+      };
+    }
+
+    function nanoQuizPage() {
+      return {
+        title: 'Quiz',
+        build: () => {
+          const state = quizState();
+          return (edition.puzzles?.quiz || []).map((q, qi) => ({
+            label: q.question, twoLine: true,
+            sub: state[qi] == null ? `Frage ${qi + 1}` : state[qi] === q.correct ? '✓ richtig' : '✗ falsch',
+            go: () => nanoQuestionPage(qi),
+          }));
+        },
+      };
+    }
+
+    function nanoQuestionPage(qi) {
+      return {
+        title: `Frage ${qi + 1}`,
+        build: () => {
+          const q = edition.puzzles.quiz[qi];
+          const given = quizState()[qi];
+          const mark = ai => given == null ? '' : ai === q.correct ? '✓' : ai === given ? '✗' : '';
+          return [
+            { label: q.question, twoLine: true, noChevron: true, go: () => {} },
+            ...q.answers.map((answer, ai) => ({ label: answer, right: mark(ai), noChevron: true, go: () => { answerQuiz(qi, ai); nanoRefresh(); } })),
+            ...(given != null ? [{ label: q.explanation || (given === q.correct ? 'Richtig!' : 'Leider nicht.'), sub: given === q.correct ? 'Richtig!' : 'Leider nicht', twoLine: true, noChevron: true, go: () => {} }] : []),
+          ];
+        },
+      };
+    }
+
+    function nanoWeekPage() {
+      const info = (label, sub) => ({ label, sub, twoLine: true, noChevron: true, go: () => {} });
+      return {
+        title: 'Die Woche',
+        build: () => {
+          const week = edition.week;
+          return [
+            ...(week.intro ? [info(week.intro, 'Die Woche')] : []),
+            ...(week.story ? [info(week.story.headline, 'Geschichte der Woche')] : []),
+            ...(week.sections || []).flatMap(x => x.points.map(pt => info(pt, sectionById[x.section]?.short || ''))),
+            ...(week.days || []).map(d => ({ label: d.headline, sub: fmtShortDate(d.date), twoLine: true, go: () => { openArchiveDay(d.date); } })),
+          ];
+        },
+      };
     }
 
     function nanoTodayPage() {
@@ -1752,7 +2232,7 @@
       const el = document.createElement('div');
       el.className = 'nano-page';
       if (page.kind === 'article') {
-        const a = byId[page.id];
+        const a = findArticle(page.id);
         const audio = safeUrl(a.audio);
         el.innerHTML = `
           <div class="nano-article">
@@ -1763,6 +2243,7 @@
             <div class="body">${a.content_html || `<p>${esc(a.summary)}</p>`}</div>
             ${a.full_text ? '' : `<div class="note">${edition.private ? 'Nur Auszug im Feed' : 'Öffentliche Ausgabe: nur Anriss'} – Volltext beim Original.</div>`}
             ${safeUrl(a.link) ? `<a class="orig" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">Original öffnen ↗</a>` : ''}
+            <button class="orig" style="margin-left:14px" onclick="toggleSaved('${a.id}'); nanoRefresh()">${isSaved(a.id) ? '★ Gemerkt' : '☆ Merken'}</button>
           </div>`;
         fixMedia(el);
       } else if (page.kind === 'np') {

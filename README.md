@@ -13,8 +13,10 @@ feeds.json ──► GitHub Action (täglich) ──► update_newspaper.py ─�
                                              ├─ Feeds holen, Volltext aus dem XML bzw. von der Artikelseite
                                              ├─ HTML bereinigen (nh3) – keine Skripte, kein Tracking
                                              ├─ Wetter (Open-Meteo), Kurszettel (Yahoo Finance, EZB), Der Tag (Wikipedia, kuriose-feiertage.de)
-                                             ├─ Gemini: Zusammenfassungen, Titelseite, Leitartikel, Fakt des Tages, Briefing
-                                             ├─ Briefing sprechen (Gemini-TTS, sonst edge-tts) → MP3 + Podcast-Feed
+                                             ├─ Rapid: Spielplan, Ergebnisse & Tabelle (ESPN)
+                                             ├─ Gemini: Zusammenfassungen, Doppelte bündeln, Titelseite, Leitartikel, Fakt, Quiz, Briefing
+                                             ├─ Sudoku des Tages, am Wochenende Lesestücke, sonntags „Die Woche“
+                                             ├─ Briefing als Zwiegespräch sprechen (Gemini-TTS, sonst edge-tts) → MP3 + Podcast-Feed
                                              └─ Ausgabe verschlüsseln, Archiv der letzten 14 Tage pflegen
 ```
 
@@ -49,6 +51,13 @@ Außerdem in `feeds.json`:
 - `boerse` – Indizes und Aktien für den Kurszettel (Yahoo-Finance-Kürzel, z. B. `EBS.VI` für die Erste Group);
   das Ressort mit `"kurszettel": true` zeigt die Aktien als Tabelle
 - `der_tag` – Kasten mit Aktionstagen, Namenstagen und Fakt des Tages
+- `fussball` – Spielplan, Ergebnisse und Tabelle eines Vereins im Ressort `ressort`. `espn_id` ist die Vereins-ID bei ESPN
+  (Rapid = 519, steht in der Adresse der Vereinsseite auf espn.com), `liga` die Liga für die Tabelle,
+  `wettbewerbe` alle Bewerbe, deren Spiele im Spielplan auftauchen sollen. Braucht keinen API-Schlüssel.
+- `raetsel` – Rätselecke mit Sudoku des Tages (Mo leicht → Sa sehr schwer) und Quiz zur Ausgabe
+- `wochenende` – samstags und sonntags „Fürs Wochenende“ mit langen Lesestücken, sonntags „Die Woche“ als Rückblick
+- `podcast.sprecher` – die beiden Stimmen der Hörausgabe: Name, Gemini-Stimme und edge-tts-Stimme als Ersatz.
+  Mit nur einem Eintrag wird's wieder ein Monolog.
 - `farbe` je Ressort – Bühnenlicht im Karussell (`violett`, `blau`, `tuerkis`, `gold`, `petrol`, `rot`, `gruen`, `orange`, `pink`, `grau`)
 
 - **Ohne KI:** Fehlt `GEMINI_API_KEY` oder streikt Gemini, erscheint die Ausgabe trotzdem – nur ohne Zusammenfassungen.
@@ -73,20 +82,33 @@ Deshalb gilt:
 
 ## Hörausgabe als Podcast
 
-Jede Ausgabe wird als MP3 gesprochen (Gemini-TTS; fällt das aus, eine österreichische edge-tts-Stimme)
-und mit Kapitelmarken als privater Podcast-Feed ausgeliefert. Die Feed-Adresse steht in der App unter
+Jede Ausgabe wird als MP3 gesprochen – als Gespräch zwischen Anna und Max, die sich die Meldungen
+zuspielen (Gemini-TTS mit zwei Stimmen; fällt das aus, zwei österreichische edge-tts-Stimmen) –
+und mit Kapitelmarken als privater Podcast-Feed ausgeliefert. Sonntags gibt's ein eigenes Kapitel „Die Woche“. Die Feed-Adresse steht in der App unter
 **Quellen & App** – einfach in Apple Podcasts, Overcast oder Pocket Casts hinzufügen.
 In der App selbst spielt der Player die MP3 mit Kapiteln, auch über Sperrbildschirm und Kopfhörer-Tasten.
 
 ## Ansichten
 
-- **Zeitung** – Titelseite mit Wetter, Kurszettel, Leitartikel, „Das Wichtigste heute“, Telegramm und „Der Tag“,
-  darunter alle Ressorts. Oben rechts lässt sich jede Ausgabe der letzten 14 Tage aus dem Archiv aufschlagen.
+- **Zeitung** – Titelseite mit Wetter, Kurszettel, Leitartikel, „Das Wichtigste heute“, Telegramm (mit Rapids
+  nächstem Spiel) und „Der Tag“, darunter alle Ressorts. Oben rechts lässt sich jede Ausgabe der letzten 14 Tage
+  aus dem Archiv aufschlagen.
 - **Karussell** – wie die Song-Auswahl bei SingStar: Die Artikel drehen sich als Cover in einer Endlosschleife.
   Wischen, Pfeiltasten oder Mausrad blättern, ↑ ↓ wechselt das Ressort, 🎲 rollt zu einem zufälligen Artikel,
   „Hörprobe“ liest die Zusammenfassung vor (mit „Auto“ bei jedem Cover).
 - **Nano** – iPod-Menü mit Click Wheel: Rad drehen zum Blättern, Mitte = auswählen, MENU = zurück.
   Auch per Tastatur (↑ ↓ ↵ Esc) und Antippen. Im Abenddruck wird's der schwarze nano.
+
+## Was sonst noch drin ist
+
+- **Merkliste** – ☆ im Artikel (oder Taste M im Karussell) merkt ihn vor. Gemerkte Artikel samt Volltext bleiben
+  auf dem Gerät gespeichert, auch wenn ihre Ausgabe längst aus dem Archiv gefallen ist.
+- **Doppelte bündeln** – Berichten mehrere Feeds über dieselbe Geschichte, erscheint sie nur einmal (mit dem
+  ausführlichsten Text) und darunter „Auch berichtet:“ mit den anderen Quellen.
+- **Rätselecke** – Sudoku des Tages (eindeutig lösbar, jeden Tag ein anderes, mit Prüfen, Notlösung und Uhr)
+  und fünf Quizfragen zu den Artikeln der Ausgabe. Der Spielstand bleibt auf dem Gerät gespeichert.
+- **Wochenende** – „Fürs Wochenende“ sammelt die langen Stücke der Woche, sonntags blickt „Die Woche“ auf die
+  großen Geschichten und Aufmacher zurück.
 
 ## Als App
 

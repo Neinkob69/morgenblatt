@@ -400,14 +400,27 @@ def describe_extras(extras, date):
         lines.append("Aktionstage heute: " + "; ".join(today["observances"]))
     if today.get("name_days"):
         lines.append("Namenstage: " + ", ".join(today["name_days"]))
+    if extras.get("football") and (football := describe_football(extras["football"])):
+        lines.append(f"Fußball – {football} (gern im passenden Sport-Kapitel erwähnen)")
     events = "\n".join(f"  {i}: {e['year']} – {e['text']}" for i, e in enumerate(today.get("events", [])))
     return "\n".join(lines), events
 
 
-def edit_front_page(client, articles, sections, extras, date):
+def edit_front_page(client, articles, sections, extras, date, speakers):
     """Gemini wählt nur IDs aus und schreibt Texte – Links und Titel kommen nie aus der KI."""
     telegram = {s["id"] for s in sections if s.get("telegramm")}
     context, events = describe_extras(extras, date)
+    if len(speakers) > 1:
+        a, b = speakers[0]["name"], speakers[1]["name"]
+        voice_rule = (f"Der Podcast ist ein lockeres Gespräch zweier Moderatoren, {a} und {b}: Sie wechseln sich ab,\n"
+                      f"  reagieren aufeinander, ergänzen sich, sprechen sich gelegentlich mit Namen an – ohne zu albern.\n"
+                      f"  Intro, jedes Kapitel und Outro sind Listen von Wortbeiträgen: [{{\"sprecher\": \"{a}\", \"text\": \"...\"}}, ...].")
+        line = f'[{{"sprecher": "{a}", "text": "..."}}, {{"sprecher": "{b}", "text": "..."}}]'
+        shape = f'{{"intro": {line}, "chapters": [{{"section": "<ressort-id>", "dialog": {line}}}], "outro": {line}}}'
+    else:
+        voice_rule = "Eine Stimme moderiert."
+        shape = '{"intro": "...", "chapters": [{"section": "<ressort-id>", "text": "..."}], "outro": "..."}'
+
     overview = [
         {"id": a["id"], "ressort": a["section"], "quelle": a["source"], "titel": a["headline"], "zusammenfassung": a["summary"]}
         for a in articles
@@ -421,7 +434,7 @@ Hier sind alle Meldungen des Tages. Stelle die Titelseite zusammen:
 - "briefing": Sprechtext für meinen täglichen Podcast, wird per Sprachausgabe vorgelesen.
   Wie eine entspannte Wiener Morgensendung: natürlich, mit Übergängen zwischen den Meldungen.
   Keine Aufzählungszeichen, keine URLs, keine Emojis. Abkürzungen und Zahlen so schreiben,
-  wie man sie spricht ("zum Beispiel" statt "z. B.").
+  wie man sie spricht ("zum Beispiel" statt "z. B."). {voice_rule}
   "intro": Begrüßung mit Datum, kurz dem Wetter, gern einem Aktionstag, dann der Tagesüberblick (4–5 Sätze).
   "chapters": je Ressort mit Meldungen ein Kapitel: die 2–4 wichtigsten Meldungen in 5–9 Sätzen,
   Sport und Lokales kürzer. Im Finanz-Kapitel darfst du die Börsenkurse nennen.
@@ -438,7 +451,7 @@ Ereignisse an diesem Tag (Index: Jahr – Text):
 
 Antworte als JSON:
 {{"lead_id": "...", "top_ids": ["...", "...", "..."],
-  "briefing": {{"intro": "...", "chapters": [{{"section": "<ressort-id>", "text": "..."}}], "outro": "..."}},
+  "briefing": {shape},
   "fact": {{"index": 0, "text": "..."}}}}
 
 Meldungen:
@@ -626,7 +639,312 @@ def collect_extras(config, date):
         extras["today"] = fetch_today(date)
         t = extras["today"]
         print(f"  ✓ Der Tag: {len(t['observances'])} Aktionstage, {len(t['name_days'])} Namenstage, {len(t['events'])} Ereignisse")
+    if config.get("fussball"):
+        extras["football"] = fetch_football(config["fussball"])
+        fb = extras["football"]
+        print(f"  ✓ Fußball {fb['team']}: {len(fb['fixtures'])} Spiele geplant, {len(fb['results'])} Ergebnisse, {len(fb['tables'])} Tabelle(n)")
     return extras
+
+
+# ───────────────────────── Fußball: Spielplan & Tabelle (ESPN, ohne Key) ─────────────────────────
+
+CLUB_NAMES = {
+    "Rapid Vienna": "SK Rapid", "Austria Vienna": "Austria Wien", "RB Salzburg": "Red Bull Salzburg", "LASK Linz": "LASK",
+    "SK Sturm Graz": "Sturm Graz", "Grazer AK": "GAK", "Wolfsberger": "WAC", "SC Rheindorf Altach": "Altach",
+    "SV Josko Ried": "SV Ried", "TSV Hartberg": "Hartberg", "WSG Swarovski Tirol": "WSG Tirol",
+    "Austria Lustenau": "Austria Lustenau", "FC Blau Weiss Linz": "Blau-Weiß Linz",
+}
+COMPETITIONS = {"aut.1": "Bundesliga", "uefa.champions": "Champions League", "uefa.europa": "Europa League", "uefa.europa.conf": "Conference League"}
+TABLE_GROUPS = {"championship": "Meistergruppe", "relegation": "Qualifikationsgruppe", "qualification": "Qualifikationsgruppe"}
+
+
+def parse_match(event, team_id, competition, names):
+    comp = event["competitions"][0]
+    sides = {c["homeAway"]: c for c in comp["competitors"]}
+    home, away = sides["home"], sides["away"]
+    score = lambda c: c["score"].get("displayValue") if isinstance(c.get("score"), dict) else c.get("score")
+    name = lambda c: names.get(c["team"]["displayName"], c["team"]["displayName"])
+    status = (comp.get("status") or event.get("status") or {}).get("type", {})
+    is_home = str(home["id"]) == str(team_id)
+    match = {
+        "date": event["date"], "competition": COMPETITIONS.get(competition, competition),
+        "home": name(home), "away": name(away), "is_home": is_home, "opponent": name(away if is_home else home),
+        "venue": (comp.get("venue") or {}).get("fullName", ""),
+        "finished": bool(status.get("completed")) or status.get("state") == "post",
+        "score": None, "result": None,
+    }
+    if match["finished"] and score(home) is not None and score(away) is not None:
+        own, other = (int(score(home)), int(score(away))) if is_home else (int(score(away)), int(score(home)))
+        match["score"] = f"{score(home)}:{score(away)}"
+        match["result"] = "S" if own > other else "N" if own < other else "U"
+    return match
+
+
+def fetch_football(cfg):
+    team_id = cfg.get("espn_id", 519)
+    names = {**CLUB_NAMES, **cfg.get("namen", {})}
+    fixtures, results, own_names = {}, {}, set()
+    for competition in cfg.get("wettbewerbe", ["aut.1"]):
+        for query, bucket in (("?fixture=true", fixtures), ("", results)):
+            try:
+                data = get_json(f"https://site.api.espn.com/apis/site/v2/sports/soccer/{competition}/teams/{team_id}/schedule{query}")
+                for event in data.get("events", []):
+                    bucket[event["id"]] = parse_match(event, team_id, competition, names)
+                    own_names |= {c["team"]["displayName"] for c in event["competitions"][0]["competitors"] if str(c["id"]) == str(team_id)}
+            except Exception as e:
+                print(f"  ✗ Spielplan {competition}: {e}")
+    tables = []
+    try:
+        data = get_json(f"https://site.web.api.espn.com/apis/v2/sports/soccer/{cfg.get('liga', 'aut.1')}/standings")
+        groups = data.get("children") or [data]
+        for group in groups:
+            rows = []
+            for entry in group["standings"]["entries"]:
+                stats = {st["name"]: st.get("displayValue") for st in entry["stats"]}
+                rows.append({
+                    "rank": int(stats.get("rank") or 0), "team": names.get(entry["team"]["displayName"], entry["team"]["displayName"]),
+                    "is_team": str(entry["team"].get("id")) == str(team_id) or entry["team"]["displayName"] in own_names,
+                    "played": stats.get("gamesPlayed"),
+                    "won": stats.get("wins"), "drawn": stats.get("ties"), "lost": stats.get("losses"),
+                    "diff": stats.get("pointDifferential"), "points": int(stats.get("points") or 0),
+                })
+            label = next((de for en, de in TABLE_GROUPS.items() if en in (group.get("name") or "").lower()), "Tabelle")
+            tables.append({"name": label, "rows": sorted(rows, key=lambda r: r["rank"])})
+    except Exception as e:
+        print(f"  ✗ Tabelle: {e}")
+    return {
+        "team": cfg.get("name", "SK Rapid"), "section": cfg.get("ressort", "rapid"),
+        "fixtures": sorted((m for m in fixtures.values() if not m["finished"]), key=lambda m: m["date"])[:5],
+        "results": sorted((m for m in results.values() if m["finished"]), key=lambda m: m["date"], reverse=True)[:5],
+        "tables": tables,
+    }
+
+
+def describe_football(fb):
+    """Für KI und Podcast: nächstes Spiel, letztes Ergebnis, Tabellenplatz."""
+    parts = []
+    if fb["fixtures"]:
+        m = fb["fixtures"][0]
+        when = datetime.fromisoformat(m["date"].replace("Z", "+00:00")).astimezone(TZ)
+        parts.append(f"nächstes Spiel {WEEKDAYS[when.weekday()]} {when.day}. {MONTHS[when.month - 1]} um {when:%H:%M} "
+                     f"{'daheim gegen' if m['is_home'] else 'auswärts bei'} {m['opponent']} ({m['competition']})")
+    if fb["results"]:
+        m = fb["results"][0]
+        parts.append(f"letztes Spiel {m['home']} gegen {m['away']} {m['score']}")
+    row = next((r for t in fb["tables"] for r in t["rows"] if r["is_team"]), None)
+    if row:
+        parts.append(f"Tabellenplatz {row['rank']} mit {row['points']} Punkten")
+    return f"{fb['team']}: " + "; ".join(parts) if parts else ""
+
+
+# ───────────────────────── Doppelte Meldungen bündeln ─────────────────────────
+
+STOPWORDS = {"gegen", "nach", "über", "wird", "werden", "wurde", "sind", "eine", "einen", "einem", "einer", "auch", "nicht",
+             "noch", "mehr", "beim", "dass", "sich", "aber", "oder", "haben", "hatte", "ihre", "seine", "sein", "diese",
+             "dieser", "with", "from", "that", "this", "will", "have", "jetzt", "heute", "neue", "neuer", "neues"}
+
+
+def title_tokens(text):
+    return {w for w in re.findall(r"[a-zäöüß]{4,}", (text or "").lower()) if w not in STOPWORDS}
+
+
+def cluster_by_title(articles):
+    """Ohne KI: gleiche Geschichte = stark überlappende Titelwörter im selben Ressort."""
+    groups, used = [], set()
+    for i, a in enumerate(articles):
+        if a["id"] in used:
+            continue
+        group, words = [a["id"]], title_tokens(a["title"])
+        for b in articles[i + 1:]:
+            other = title_tokens(b["title"])
+            shared = len(words & other)
+            close_in_time = not (a.get("published") and b.get("published")) or abs(
+                datetime.fromisoformat(a["published"]) - datetime.fromisoformat(b["published"])) <= timedelta(hours=36)
+            if b["id"] not in used and b["section"] == a["section"] and shared >= 3 and shared / len(words | other) >= 0.6 and close_in_time:
+                group.append(b["id"])
+                used.add(b["id"])
+        if len(group) > 1:
+            groups.append(group)
+    return groups
+
+
+def cluster_with_ai(client, articles):
+    payload = [{"id": a["id"], "ressort": a["section"], "titel": a["headline"], "zusammenfassung": shorten(a["summary"], 200)} for a in articles]
+    prompt = f"""Finde unter diesen Meldungen solche, die über dasselbe konkrete Ereignis berichten –
+also dieselbe Nachricht aus verschiedenen Quellen. Nur echte Doppelungen gruppieren, nicht bloß dasselbe Thema.
+Antworte als JSON: {{"gruppen": [["id", "id"], ...]}} – eine leere Liste, wenn es keine gibt.
+
+Meldungen:
+{json.dumps(payload, ensure_ascii=False)}"""
+    result = ask_gemini(client, prompt)
+    return None if result is None else [g for g in result.get("gruppen", []) if isinstance(g, list)]
+
+
+def merge_clusters(articles, groups):
+    """Pro Geschichte bleibt der gehaltvollste Artikel; die anderen Quellen hängen als „Auch berichtet“ dran."""
+    by_id = {a["id"]: a for a in articles}
+    dropped = set()
+    for group in groups:
+        members = [by_id[i] for i in dict.fromkeys(group) if i in by_id and i not in dropped]
+        if len(members) < 2:
+            continue
+        primary = max(members, key=lambda a: (a.get("full_text", False), len(a["content_html"])))
+        for other in members:
+            if other is not primary:
+                primary.setdefault("related", []).append({"source": other["source"], "title": other["headline"], "link": other["link"]})
+                dropped.add(other["id"])
+    return [a for a in articles if a["id"] not in dropped], len(dropped)
+
+
+# ───────────────────────── Rätsel: Sudoku des Tages & Nachrichten-Quiz ─────────────────────────
+
+SUDOKU_LEVELS = [("leicht", 40), ("leicht", 38), ("mittel", 34), ("mittel", 32), ("schwer", 29), ("sehr schwer", 26), ("mittel", 32)]
+
+
+def count_solutions(grid, limit=2):
+    """Backtracking mit „wenigste Kandidaten zuerst“ – schnell genug für die Eindeutigkeitsprüfung."""
+    best, best_options = None, None
+    for i in range(81):
+        if grid[i]:
+            continue
+        r, c = divmod(i, 9)
+        b = (r // 3) * 27 + (c // 3) * 3
+        taken = {grid[r * 9 + k] for k in range(9)} | {grid[k * 9 + c] for k in range(9)} | {grid[b + (k // 3) * 9 + k % 3] for k in range(9)}
+        options = [n for n in range(1, 10) if n not in taken]
+        if not options:
+            return 0
+        if best is None or len(options) < len(best_options):
+            best, best_options = i, options
+            if len(options) == 1:
+                break
+    if best is None:
+        return 1
+    total = 0
+    for n in best_options:
+        grid[best] = n
+        total += count_solutions(grid, limit - total)
+        grid[best] = 0
+        if total >= limit:
+            break
+    return total
+
+
+def make_sudoku(date):
+    """Sudoku des Tages: eindeutig lösbar; Montag leicht, Samstag sehr schwer – wie in der Zeitung."""
+    import random
+
+    rng = random.Random(f"morgenblatt-{date.isoformat()}")
+    shuffled = lambda seq: rng.sample(list(seq), len(seq))
+    rows = [g * 3 + r for g in shuffled(range(3)) for r in shuffled(range(3))]
+    cols = [g * 3 + c for g in shuffled(range(3)) for c in shuffled(range(3))]
+    digits = shuffled(range(1, 10))
+    solution = [digits[(3 * (r % 3) + r // 3 + c) % 9] for r in rows for c in cols]
+    level, clues = SUDOKU_LEVELS[date.weekday()]
+    puzzle = solution[:]
+    for cell in shuffled(range(81)):
+        if sum(1 for v in puzzle if v) <= clues:
+            break
+        keep, puzzle[cell] = puzzle[cell], 0
+        if count_solutions(puzzle[:]) != 1:
+            puzzle[cell] = keep
+    return {"puzzle": "".join(map(str, puzzle)), "solution": "".join(map(str, solution)), "level": level}
+
+
+def make_quiz(client, articles, date):
+    import random
+
+    payload = [{"id": a["id"], "titel": a["headline"], "zusammenfassung": a["summary"]} for a in articles if a.get("summary")][:60]
+    prompt = f"""Erstelle ein kurzes Quiz zur heutigen Ausgabe: 5 Fragen zu 5 verschiedenen Meldungen,
+gern aus verschiedenen Ressorts. Je Frage 3 Antworten, genau eine richtig. Die richtige Antwort muss sich
+eindeutig aus der Zusammenfassung ergeben, die falschen sollen plausibel klingen. Locker formuliert, auf Deutsch.
+
+Antworte als JSON: {{"fragen": [{{"id": "<artikel-id>", "frage": "...", "antworten": ["...", "...", "..."], "richtig": 0, "erklaerung": "ein Satz"}}]}}
+
+Meldungen:
+{json.dumps(payload, ensure_ascii=False)}"""
+    result = ask_gemini(client, prompt) or {}
+    by_id = {a["id"] for a in articles}
+    rng = random.Random(date.isoformat())
+    quiz = []
+    for q in result.get("fragen", []):
+        answers, right = q.get("antworten"), q.get("richtig")
+        if q.get("id") not in by_id or not isinstance(answers, list) or not 2 <= len(answers) <= 4 or not isinstance(right, int) or not 0 <= right < len(answers):
+            continue
+        order = rng.sample(range(len(answers)), len(answers))   # KI setzt die richtige Antwort gern an Stelle 1
+        quiz.append({"article": q["id"], "question": q.get("frage", ""), "answers": [answers[i] for i in order],
+                     "correct": order.index(right), "explanation": q.get("erklaerung", "")})
+    return quiz[:5]
+
+
+# ───────────────────────── Wochenende: Lange Lesestücke & Die Woche ─────────────────────────
+
+def load_archive(days, today):
+    """Die letzten Ausgaben aus dem Archiv (ggf. entschlüsselt), neueste zuerst – ohne die von heute."""
+    editions = []
+    for entry in read_json(out("archiv", "index.json"), {}).get("editions", []):
+        if len(editions) >= days or entry.get("date") == today.isoformat():
+            continue
+        if not re.fullmatch(r"archiv/\d{4}-\d{2}-\d{2}\.json", entry.get("file", "")):
+            continue
+        payload = read_json(out(entry["file"]), None)
+        if readable(payload):
+            editions.append(decrypt(payload) if payload.get("encrypted") else payload)
+    return editions
+
+
+def pick_longreads(client, articles, archive, sections):
+    known = {s["id"] for s in sections}
+    pool = {}
+    for source, date in [(articles, None)] + [(ed.get("articles", []), ed.get("date")) for ed in archive]:
+        for a in source:
+            if a.get("full_text") and a.get("reading_minutes", 0) >= 5 and a["section"] in known and a["id"] not in pool:
+                pool[a["id"]] = {**a, "from_date": date} if date else a
+    candidates = sorted(pool.values(), key=lambda a: a["reading_minutes"], reverse=True)[:30]
+    if not candidates:
+        return []
+    chosen = []
+    if client:
+        payload = [{"id": a["id"], "titel": a["headline"], "zusammenfassung": a["summary"], "minuten": a["reading_minutes"]} for a in candidates]
+        result = ask_gemini(client, f"""Wähle für die Wochenendausgabe die 4 lesenswertesten langen Stücke aus –
+gehaltvoll, gern unterschiedliche Themen, keine bloßen Meldungen.
+Antworte als JSON: {{"ids": ["...", "...", "...", "..."]}}
+
+Kandidaten:
+{json.dumps(payload, ensure_ascii=False)}""") or {}
+        chosen = [i for i in dict.fromkeys(result.get("ids", [])) if i in pool][:4]
+    return [pool[i] for i in (chosen or [a["id"] for a in candidates[:4]])]
+
+
+def review_week(client, archive, edition_today, sections):
+    """Sonntag: Rückblick auf die letzten sieben Ausgaben."""
+    days = sorted([edition_today, *archive[:6]], key=lambda e: e.get("date", ""))
+    timeline = [{"date": e.get("date"), "headline": (e.get("lead") or {}).get("headline", "")} for e in days if e.get("date")]
+    review = {"from": timeline[0]["date"] if timeline else None, "to": edition_today["date"], "days": timeline}
+    if not client:
+        return review
+    digest = []
+    for e in days:
+        by_id = {a["id"]: a for a in e.get("articles", [])}
+        picks = [by_id[i] for i in [(e.get("lead") or {}).get("article"), *e.get("top", [])] if i in by_id]
+        digest.append({"datum": e.get("date"), "aufmacher": (e.get("lead") or {}).get("headline"),
+                       "meldungen": [{"ressort": a["section"], "titel": a["headline"], "kurz": shorten(a["summary"], 160)} for a in picks]})
+    ressorts = [{"id": s["id"], "name": s["name"]} for s in sections]
+    result = ask_gemini(client, f"""Schreibe für die Sonntagsausgabe meiner Wiener Zeitung den Wochenrückblick „Die Woche“.
+- "intro": 3–4 Sätze: Was hat diese Woche geprägt?
+- "story": die Geschichte der Woche: {{"headline": "...", "text": "120–180 Wörter, Absätze mit \\n\\n"}}
+- "sections": je Ressort mit Stoff 2–3 kurze Stichpunkte: {{"section": "<ressort-id>", "points": ["...", "..."]}}
+Nur was in den Meldungen steht. Ressorts: {json.dumps(ressorts, ensure_ascii=False)}
+Antworte als JSON: {{"intro": "...", "story": {{"headline": "...", "text": "..."}}, "sections": [...]}}
+
+Die Woche in Meldungen:
+{json.dumps(digest, ensure_ascii=False)}""") or {}
+    known = {s["id"] for s in sections}
+    review.update(
+        intro=(result.get("intro") or "").strip(),
+        story=result.get("story") if isinstance(result.get("story"), dict) else None,
+        sections=[x for x in result.get("sections", []) if isinstance(x, dict) and x.get("section") in known and x.get("points")],
+    )
+    return review
 
 
 # ───────────────────────── 4b. Ausgabe schreiben ─────────────────────────
@@ -640,25 +958,43 @@ def greeting_without_ai(extras, date):
     return " ".join(parts)
 
 
-def build_briefing(sections, articles, ai_briefing, greeting=""):
+def chapter(chapter_id, title, content, speakers):
+    """Ein Kapitel hat Klartext (zum Vorlesen im Browser) und Wortbeiträge mit Sprecher (für den Podcast)."""
+    names = {sp["name"].lower(): sp["name"] for sp in speakers}
+    if isinstance(content, str):
+        content = [{"sprecher": speakers[0]["name"], "text": content}]
+    lines = []
+    for item in content or []:
+        if isinstance(item, dict) and (item.get("text") or "").strip():
+            who = str(item.get("sprecher") or item.get("speaker") or "").strip().rstrip(":").lower()
+            lines.append({"speaker": names.get(who, speakers[0]["name"]), "text": item["text"].strip()})
+    return {"id": chapter_id, "title": title, "text": " ".join(l["text"] for l in lines), "lines": lines}
+
+
+def build_briefing(sections, articles, ai_briefing, speakers, greeting=""):
     names = {s["id"]: s.get("kurz") or s["name"] for s in sections}
     if ai_briefing and ai_briefing.get("chapters"):
-        chapters = [{"id": "intro", "title": "Begrüßung", "text": ai_briefing.get("intro", "")}]
+        chapters = [chapter("intro", "Begrüßung", ai_briefing.get("intro"), speakers)]
         chapters += [
-            {"id": c["section"], "title": names[c["section"]], "text": c.get("text", "")}
-            for c in ai_briefing["chapters"] if c.get("section") in names and c.get("text")
+            chapter(c["section"], names[c["section"]], c.get("dialog") or c.get("text"), speakers)
+            for c in ai_briefing["chapters"] if isinstance(c, dict) and c.get("section") in names
         ]
-        if ai_briefing.get("outro"):
-            chapters.append({"id": "outro", "title": "Ausklang", "text": ai_briefing["outro"]})
+        chapters.append(chapter("outro", "Ausklang", ai_briefing.get("outro"), speakers))
         return [c for c in chapters if c["text"]]
 
-    chapters = [{"id": "intro", "title": "Begrüßung", "text": greeting}] if greeting else []
+    chapters = [chapter("intro", "Begrüßung", greeting, speakers)] if greeting else []
     for s in sections:
         items = [a for a in articles if a["section"] == s["id"]][:2]
         if items:
             text = " ".join(f"{a['headline']}. {a['summary']}" for a in items)
-            chapters.append({"id": s["id"], "title": names[s["id"]], "text": f"{names[s['id']]}: {text}"})
+            chapters.append(chapter(s["id"], names[s["id"]], f"{names[s['id']]}: {text}", speakers))
     return chapters
+
+
+def podcast_speakers(settings):
+    """Zwei Sprecher (Dialog) oder eine Stimme – je nachdem, was in feeds.json steht."""
+    speakers = [sp for sp in settings.get("sprecher", []) if sp.get("name")][:2]
+    return speakers or [{"name": "Moderation", "gemini": settings.get("stimme_gemini", "Charon"), "edge": settings.get("stimme_edge", "de-AT-JonasNeural")}]
 
 
 def strip_fulltext(articles):
@@ -674,7 +1010,7 @@ def build_edition(config):
     telegram = {s["id"] for s in sections if s.get("telegramm")}
 
     date = datetime.now(TZ).date()
-    print("Hole Wetter, Börse und Der Tag …")
+    print("Hole Wetter, Börse, Fußball und Der Tag …")
     extras = collect_extras(config, date)
     print("Hole Feeds …")
     articles, feed_status = collect_articles(config)
@@ -689,16 +1025,22 @@ def build_edition(config):
     for art in articles:
         art.update(headline=art["title"], summary=shorten(to_text(art["content_html"]), 280), takeaway="")
 
+    speakers = podcast_speakers(config.get("podcast", {}))
     api_key = os.environ.get("GEMINI_API_KEY")
-    client, front, lead_text = None, None, None
+    client, front, lead_text, groups = None, None, None, None
     if api_key:
         from google import genai
         client = genai.Client(api_key=api_key)
         print(f"KI-Redaktion mit {GEMINI_MODEL} (Ausweichmodelle: {', '.join(GEMINI_FALLBACK_MODELS)}) …")
         summarize(client, articles)
-        front = edit_front_page(client, articles, sections, extras, date)
+        groups = cluster_with_ai(client, articles)
     else:
         print("Kein GEMINI_API_KEY – Ausgabe erscheint ohne KI-Redaktion.")
+    articles, merged = merge_clusters(articles, groups if groups is not None else cluster_by_title(articles))
+    if merged:
+        print(f"  {merged} doppelte Meldungen gebündelt")
+    if client:
+        front = edit_front_page(client, articles, sections, extras, date, speakers)
 
     by_id = {a["id"]: a for a in articles}
     if front and front.get("lead_id") in by_id:
@@ -717,6 +1059,26 @@ def build_edition(config):
         "text": shorten(to_text(lead["content_html"], paragraphs=True), 1400 if PASSWORD else 400),
         "takeaway": lead["takeaway"],
     }
+
+    # Wochenende: die besten langen Stücke der Woche, sonntags dazu der Rückblick
+    weekend = date.weekday() >= 5 and config.get("wochenende", True)
+    archive = load_archive(7, date) if weekend else []
+    longreads = pick_longreads(client, articles, archive, sections) if weekend else []
+    present = {a["id"] for a in articles}
+    for art in longreads:
+        art["weekend"] = True
+        if art["id"] not in present:
+            articles.append(art)
+    if longreads:
+        print(f"  Wochenende: {len(longreads)} lange Lesestücke")
+
+    puzzles = {}
+    if config.get("raetsel", True):
+        puzzles["sudoku"] = make_sudoku(date)
+        if client and (quiz := make_quiz(client, articles, date)):
+            puzzles["quiz"] = quiz
+        print(f"  Rätsel: Sudoku ({puzzles['sudoku']['level']}), {len(puzzles.get('quiz', []))} Quizfragen")
+
     if not PASSWORD:
         strip_fulltext(articles)
 
@@ -754,10 +1116,22 @@ def build_edition(config):
         ],
         "lead": {"article": lead["id"], **{k: lead_text.get(k, "") for k in ("headline", "subline", "text", "takeaway")}},
         "top": top,
-        "briefing": build_briefing(sections, articles, front and front.get("briefing"), greeting_without_ai(extras, date)),
-        **{key: extras[key] for key in ("weather", "markets", "today") if extras.get(key) is not None},
+        "briefing": build_briefing(sections, articles, front and front.get("briefing"), speakers, greeting_without_ai(extras, date)),
+        "speakers": [sp["name"] for sp in speakers],
+        **{key: extras[key] for key in ("weather", "markets", "today", "football") if extras.get(key) is not None},
+        **({"puzzles": puzzles} if puzzles else {}),
+        **({"weekend": {"longreads": [a["id"] for a in longreads]}} if longreads else {}),
         "articles": articles,
     }
+
+    if weekend and date.weekday() == 6:
+        week = review_week(client, archive, edition, sections)
+        edition["week"] = week
+        spoken = " ".join(x for x in [week.get("intro", ""), (week.get("story") or {}).get("text", "").replace("\n\n", " ")] if x)
+        if spoken:
+            outro = [c for c in edition["briefing"] if c["id"] == "outro"]
+            edition["briefing"] = [c for c in edition["briefing"] if c["id"] != "outro"] + [chapter("woche", "Die Woche", spoken, speakers)] + outro
+        print(f"  Die Woche: Rückblick über {len(week['days'])} Ausgaben")
     return edition, client
 
 
@@ -765,6 +1139,8 @@ def build_edition(config):
 
 TTS_STYLE = ("Lies den folgenden Text als ruhige, freundliche Moderation einer Wiener "
              "Morgensendung vor – natürlich, warm und nicht zu schnell:")
+TTS_STYLE_DIALOG = ("Lies das folgende Gespräch als lockere Wiener Morgensendung zweier Moderatoren vor – "
+                    "natürlich, warm, mit kleinen Reaktionen und nicht zu schnell:")
 SILENCE_SECONDS = 0.6
 EDGE_BITRATE = 48000  # edge-tts liefert MP3 mit 24 kHz / 48 kbit/s
 WEEKDAYS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
@@ -783,33 +1159,39 @@ def timestamp(seconds, hours=False):
     return f"{h:02d}:{m:02d}:{s:02d}" if hours or h else f"{m:02d}:{s:02d}"
 
 
-def synthesize_gemini(client, text, voice):
-    """Gemini-TTS liefert rohes PCM (16 Bit, mono). Gibt (pcm, samplerate) zurück."""
+def synthesize_gemini(client, chapter, speakers):
+    """Gemini-TTS liefert rohes PCM (16 Bit, mono). Bei zwei Sprechern im Kapitel als Dialog mit zwei Stimmen."""
     from google.genai import types
 
+    voice = lambda name: types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=name))
+    present = {line["speaker"] for line in chapter["lines"]}
+    if len(speakers) > 1 and len(present) > 1:
+        contents = f"{TTS_STYLE_DIALOG}\n\n" + "\n".join(f"{line['speaker']}: {line['text']}" for line in chapter["lines"])
+        speech = types.SpeechConfig(multi_speaker_voice_config=types.MultiSpeakerVoiceConfig(speaker_voice_configs=[
+            types.SpeakerVoiceConfig(speaker=sp["name"], voice_config=voice(sp["gemini"])) for sp in speakers
+        ]))
+    else:
+        speaker = next((sp for sp in speakers if sp["name"] in present), speakers[0])
+        contents = f"{TTS_STYLE}\n\n{chapter['text']}"
+        speech = types.SpeechConfig(voice_config=voice(speaker["gemini"]))
     response = client.models.generate_content(
         model=GEMINI_TTS_MODEL,
-        contents=f"{TTS_STYLE}\n\n{text}",
-        config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice))
-            ),
-        ),
+        contents=contents,
+        config=types.GenerateContentConfig(response_modalities=["AUDIO"], speech_config=speech),
     )
     blob = next(part.inline_data for part in response.candidates[0].content.parts if part.inline_data)
     rate = re.search(r"rate=(\d+)", blob.mime_type or "")
     return blob.data, int(rate.group(1)) if rate else 24000
 
 
-def podcast_gemini(client, chapters, voice):
+def podcast_gemini(client, chapters, speakers):
     import lameenc
 
     pcm, starts, rate = bytearray(), [], 24000
     for chapter in chapters:
         for attempt in range(3):
             try:
-                data, rate = synthesize_gemini(client, chapter["text"], voice)
+                data, rate = synthesize_gemini(client, chapter, speakers)
                 break
             except Exception as e:
                 print(f"  TTS-Fehler bei „{chapter['title']}“ (Versuch {attempt + 1}/3): {e}")
@@ -827,12 +1209,14 @@ def podcast_gemini(client, chapters, voice):
     return bytes(encoder.encode(bytes(pcm)) + encoder.flush()), starts, len(pcm) / 2 / rate
 
 
-def podcast_edge(chapters, voice):
-    """Ersatzstimme ohne API-Key, falls Gemini-TTS nicht will (Microsoft-Edge-Vorlesestimmen)."""
+def podcast_edge(chapters, speakers):
+    """Ersatzstimmen ohne API-Key, falls Gemini-TTS nicht will (Microsoft-Edge-Vorlesestimmen), Satz für Satz je Sprecher."""
     import asyncio
     import edge_tts
 
-    async def speak(text):
+    voices = {sp["name"]: sp.get("edge", "de-AT-JonasNeural") for sp in speakers}
+
+    async def speak(text, voice):
         audio = bytearray()
         async for chunk in edge_tts.Communicate(text, voice).stream():
             if chunk["type"] == "audio":
@@ -842,7 +1226,8 @@ def podcast_edge(chapters, voice):
     mp3, starts = bytearray(), []
     for chapter in chapters:
         starts.append(len(mp3) * 8 / EDGE_BITRATE)
-        mp3 += asyncio.run(speak(chapter["text"]))
+        for line in chapter["lines"]:
+            mp3 += asyncio.run(speak(line["text"], voices.get(line["speaker"], speakers[0].get("edge", "de-AT-JonasNeural"))))
     return bytes(mp3), starts, len(mp3) * 8 / EDGE_BITRATE
 
 
@@ -851,18 +1236,19 @@ def make_podcast(edition, settings, client, podcast_dir):
     chapters = edition["briefing"]
     if not settings.get("aktiv", True) or not chapters:
         return None
+    speakers = podcast_speakers(settings)
 
     audio, engine = None, None
     if client:
         try:
             print(f"Spreche Hörausgabe mit {GEMINI_TTS_MODEL} …")
-            audio, engine = podcast_gemini(client, chapters, settings.get("stimme_gemini", "Charon")), "gemini"
+            audio, engine = podcast_gemini(client, chapters, speakers), "gemini"
         except Exception as e:
             print(f"  Gemini-TTS fehlgeschlagen, weiter mit edge-tts: {e}")
     if not audio:
         try:
             print("Spreche Hörausgabe mit edge-tts …")
-            audio, engine = podcast_edge(chapters, settings.get("stimme_edge", "de-AT-JonasNeural")), "edge"
+            audio, engine = podcast_edge(chapters, speakers), "edge"
         except Exception as e:
             print(f"  Heute keine Hörausgabe: {e}")
             return None

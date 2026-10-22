@@ -14,8 +14,10 @@
   "podcast": {
     "aktiv": true,
     "folgen_behalten": 7,
-    "stimme_gemini": "Charon",
-    "stimme_edge": "de-AT-JonasNeural"
+    "sprecher": [
+      {"name": "Anna", "gemini": "Kore", "edge": "de-AT-IngridNeural"},
+      {"name": "Max", "gemini": "Charon", "edge": "de-AT-JonasNeural"}
+    ]
   },
   "wetter": {
     "ort": "Wien",
@@ -46,6 +48,15 @@
     ]
   },
   "der_tag": true,
+  "raetsel": true,
+  "wochenende": true,
+  "fussball": {
+    "name": "SK Rapid",
+    "ressort": "rapid",
+    "espn_id": 519,
+    "liga": "aut.1",
+    "wettbewerbe": ["aut.1", "uefa.champions", "uefa.europa", "uefa.europa.conf"]
+  },
   "ressorts": [
     {
       "id": "ai",
