@@ -4,11 +4,22 @@ Ablauf:
   1. Alle Feeds holen, Artikel normalisieren (Volltext aus dem XML, Bild, Audio)
   2. Reine Teaser-Feeds: Volltext von der Artikelseite nachladen
   3. Gemini fasst jeden Artikel zusammen und stellt die Titelseite zusammen
-  4. edition.json + feeds.opml schreiben
+  4. Hörausgabe als MP3 sprechen und als Podcast-Feed ausliefern
+  5. Ausgabe (verschlüsselt) + Archiv nach OUT_DIR schreiben – von dort deployt die Action
 
 Ohne GEMINI_API_KEY (oder wenn Gemini streikt) erscheint die Ausgabe trotzdem,
-nur ohne KI-Redaktion.
+nur ohne KI-Redaktion. Ohne MORGENBLATT_PASSWORT ist die Seite öffentlich – dann
+enthält sie nur Anrisse und keine fremden Volltexte.
+
+Umgebungsvariablen:
+  GEMINI_API_KEY        KI-Redaktion und Sprachausgabe
+  MORGENBLATT_PASSWORT  verschlüsselt die Ausgabe, schaltet Volltexte frei
+  OUT_DIR               Zielordner (Standard: aktueller Ordner)
+  SITE_URL              Adresse der live-Seite – von dort kommen Archiv und alte Folgen zurück
+  NUR_FRONTEND=true     keine neue Ausgabe bauen, nur die vorhandene neu veröffentlichen
 """
+import base64
+import gzip
 import hashlib
 import html
 import json
@@ -16,18 +27,28 @@ import os
 import re
 import socket
 import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from datetime import datetime, timedelta, timezone
-from xml.sax.saxutils import quoteattr
+from email.utils import format_datetime
+from xml.sax.saxutils import escape, quoteattr
+from zoneinfo import ZoneInfo
 
 import feedparser
 import nh3
 
 CONFIG_FILE = "feeds.json"
 EDITION_FILE = "edition.json"
-OPML_FILE = "feeds.opml"
+
+OUT_DIR = os.environ.get("OUT_DIR", ".")
+SITE_URL = os.environ.get("SITE_URL", "")
+PASSWORD = os.environ.get("MORGENBLATT_PASSWORT", "")
+TZ = ZoneInfo("Europe/Vienna")
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")
+KDF_ITERATIONS = 310_000
 SUMMARY_BATCH = 40          # Artikel pro Zusammenfassungs-Anfrage
 TEASER_MAX_CHARS = 900      # weniger Text im Feed = nur Teaser → Volltext nachladen
 MAX_CONTENT_CHARS = 40000   # Obergrenze pro Artikel, hält edition.json schlank
@@ -317,11 +338,14 @@ Hier sind alle Meldungen des Tages. Stelle die Titelseite zusammen:
 
 - "lead_id": die ID des wichtigsten, gehaltvollsten Stücks (wird der Leitartikel; nicht aus {sorted(telegram)})
 - "top_ids": 3 weitere wichtige IDs für "Das Wichtigste heute" (nicht der Leitartikel, nicht aus {sorted(telegram)})
-- "briefing": Sprechtext für meine Hörausgabe, wird per Sprachausgabe vorgelesen.
-  Natürlich und locker formuliert, keine Aufzählungszeichen, keine URLs, keine Emojis.
-  "intro": kurze Begrüßung mit dem Tagesüberblick (2–3 Sätze).
-  "chapters": je Ressort mit Meldungen ein Kapitel, die 2–3 wichtigsten Meldungen in 4–7 Sätzen.
-  "outro": ein Satz zum Abschluss.
+- "briefing": Sprechtext für meinen täglichen Podcast, wird per Sprachausgabe vorgelesen.
+  Wie eine entspannte Wiener Morgensendung: natürlich, mit Übergängen zwischen den Meldungen.
+  Keine Aufzählungszeichen, keine URLs, keine Emojis. Abkürzungen und Zahlen so schreiben,
+  wie man sie spricht ("zum Beispiel" statt "z. B.").
+  "intro": Begrüßung mit dem Tagesüberblick (3–4 Sätze).
+  "chapters": je Ressort mit Meldungen ein Kapitel: die 2–4 wichtigsten Meldungen in 6–10 Sätzen.
+  "outro": 1–2 Sätze zum Abschluss.
+  Insgesamt etwa 700–1000 Wörter.
 
 Ressorts: {json.dumps(ressorts, ensure_ascii=False)}
 
@@ -385,27 +409,15 @@ def build_briefing(sections, articles, ai_briefing):
     return chapters
 
 
-def write_opml(config, feed_status):
-    lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<opml version="2.0">',
-        f"  <head><title>{html.escape(config.get('titel', 'Morgenblatt'))} – Quellen</title></head>",
-        "  <body>",
-    ]
-    for section in config["ressorts"]:
-        lines.append(f"    <outline text={quoteattr(section['name'])}>")
-        for feed in feed_list(section):
-            name = feed_status[feed["url"]]["name"]
-            lines.append(f"      <outline type=\"rss\" text={quoteattr(name)} xmlUrl={quoteattr(feed['url'])}/>")
-        lines.append("    </outline>")
-    lines += ["  </body>", "</opml>", ""]
-    with open(OPML_FILE, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+def strip_fulltext(articles):
+    """Ohne Passwort ist die Seite öffentlich – dann nur Anrisse, keine fremden Volltexte."""
+    for art in articles:
+        teaser = shorten(to_text(art["content_html"]), 400)
+        art["content_html"] = f"<p>{html.escape(teaser)}</p>" if teaser else ""
+        art["full_text"] = False
 
 
-def run():
-    with open(CONFIG_FILE, encoding="utf-8") as f:
-        config = json.load(f)
+def build_edition(config):
     sections = config["ressorts"]
     telegram = {s["id"] for s in sections if s.get("telegramm")}
 
@@ -413,7 +425,7 @@ def run():
     articles, feed_status = collect_articles(config)
     if not articles:
         raise SystemExit("Keine Artikel gefunden – alte Ausgabe bleibt stehen.")
-    enrich_fulltext(articles, config.get("einstellungen", {}).get("volltext_nachladen", True))
+    enrich_fulltext(articles, config.get("einstellungen", {}).get("volltext_nachladen", True) and bool(PASSWORD))
 
     order = {s["id"]: i for i, s in enumerate(sections)}
     articles.sort(key=lambda a: a["published"] or "", reverse=True)
@@ -447,14 +459,18 @@ def run():
     lead_text = lead_text or {
         "headline": lead["headline"],
         "subline": lead["summary"],
-        "text": shorten(to_text(lead["content_html"], paragraphs=True), 1400),
+        "text": shorten(to_text(lead["content_html"], paragraphs=True), 1400 if PASSWORD else 400),
         "takeaway": lead["takeaway"],
     }
+    if not PASSWORD:
+        strip_fulltext(articles)
 
     edition = {
         "version": 2,
+        "date": datetime.now(TZ).date().isoformat(),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "ai": bool(front),
+        "private": bool(PASSWORD),
         "title": config.get("titel", "MORGENBLATT"),
         "subtitle": config.get("unterzeile", ""),
         "telegram": config.get("telegramm", {}),
@@ -475,12 +491,343 @@ def run():
         "briefing": build_briefing(sections, articles, front and front.get("briefing")),
         "articles": articles,
     }
+    return edition, client
 
-    with open(EDITION_FILE, "w", encoding="utf-8") as f:
-        json.dump(edition, f, ensure_ascii=False, indent=1)
-    write_opml(config, feed_status)
-    full = sum(a["full_text"] for a in articles)
-    print(f"{EDITION_FILE} geschrieben: {len(articles)} Artikel, davon {full} mit Volltext.")
+
+# ───────────────────────── 5. Hörausgabe als Podcast ─────────────────────────
+
+TTS_STYLE = ("Lies den folgenden Text als ruhige, freundliche Moderation einer Wiener "
+             "Morgensendung vor – natürlich, warm und nicht zu schnell:")
+SILENCE_SECONDS = 0.6
+EDGE_BITRATE = 48000  # edge-tts liefert MP3 mit 24 kHz / 48 kbit/s
+WEEKDAYS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+MONTHS = ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli",
+          "August", "September", "Oktober", "November", "Dezember"]
+
+
+def german_date(iso_date):
+    d = datetime.fromisoformat(iso_date)
+    return f"{WEEKDAYS[d.weekday()]}, {d.day}. {MONTHS[d.month - 1]} {d.year}"
+
+
+def timestamp(seconds, hours=False):
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}" if hours or h else f"{m:02d}:{s:02d}"
+
+
+def synthesize_gemini(client, text, voice):
+    """Gemini-TTS liefert rohes PCM (16 Bit, mono). Gibt (pcm, samplerate) zurück."""
+    from google.genai import types
+
+    response = client.models.generate_content(
+        model=GEMINI_TTS_MODEL,
+        contents=f"{TTS_STYLE}\n\n{text}",
+        config=types.GenerateContentConfig(
+            response_modalities=["AUDIO"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice))
+            ),
+        ),
+    )
+    blob = next(part.inline_data for part in response.candidates[0].content.parts if part.inline_data)
+    rate = re.search(r"rate=(\d+)", blob.mime_type or "")
+    return blob.data, int(rate.group(1)) if rate else 24000
+
+
+def podcast_gemini(client, chapters, voice):
+    import lameenc
+
+    pcm, starts, rate = bytearray(), [], 24000
+    for chapter in chapters:
+        for attempt in range(3):
+            try:
+                data, rate = synthesize_gemini(client, chapter["text"], voice)
+                break
+            except Exception as e:
+                print(f"  TTS-Fehler bei „{chapter['title']}“ (Versuch {attempt + 1}/3): {e}")
+                if attempt == 2:
+                    raise
+                time.sleep(30)  # meist ein Rate-Limit
+        starts.append(len(pcm) / 2 / rate)
+        pcm += data + bytes(int(rate * SILENCE_SECONDS) * 2)
+
+    encoder = lameenc.Encoder()
+    encoder.set_bit_rate(64)
+    encoder.set_in_sample_rate(rate)
+    encoder.set_channels(1)
+    encoder.set_quality(2)
+    return bytes(encoder.encode(bytes(pcm)) + encoder.flush()), starts, len(pcm) / 2 / rate
+
+
+def podcast_edge(chapters, voice):
+    """Ersatzstimme ohne API-Key, falls Gemini-TTS nicht will (Microsoft-Edge-Vorlesestimmen)."""
+    import asyncio
+    import edge_tts
+
+    async def speak(text):
+        audio = bytearray()
+        async for chunk in edge_tts.Communicate(text, voice).stream():
+            if chunk["type"] == "audio":
+                audio += chunk["data"]
+        return bytes(audio)
+
+    mp3, starts = bytearray(), []
+    for chapter in chapters:
+        starts.append(len(mp3) * 8 / EDGE_BITRATE)
+        mp3 += asyncio.run(speak(chapter["text"]))
+    return bytes(mp3), starts, len(mp3) * 8 / EDGE_BITRATE
+
+
+def make_podcast(edition, settings, client, podcast_dir):
+    """Spricht das Briefing als MP3, trägt Kapitelmarken ein und gibt die Folge für den Feed zurück."""
+    chapters = edition["briefing"]
+    if not settings.get("aktiv", True) or not chapters:
+        return None
+
+    audio, engine = None, None
+    if client:
+        try:
+            print(f"Spreche Hörausgabe mit {GEMINI_TTS_MODEL} …")
+            audio, engine = podcast_gemini(client, chapters, settings.get("stimme_gemini", "Charon")), "gemini"
+        except Exception as e:
+            print(f"  Gemini-TTS fehlgeschlagen, weiter mit edge-tts: {e}")
+    if not audio:
+        try:
+            print("Spreche Hörausgabe mit edge-tts …")
+            audio, engine = podcast_edge(chapters, settings.get("stimme_edge", "de-AT-JonasNeural")), "edge"
+        except Exception as e:
+            print(f"  Heute keine Hörausgabe: {e}")
+            return None
+
+    mp3, starts, duration = audio
+    if len(mp3) < 10_000:
+        print("  Heute keine Hörausgabe: Audio leer.")
+        return None
+    filename = f"{edition['date']}.mp3"
+    os.makedirs(out(podcast_dir), exist_ok=True)
+    with open(out(podcast_dir, filename), "wb") as f:
+        f.write(mp3)
+    for chapter, start in zip(chapters, starts):
+        chapter["start"] = round(start, 1)
+    edition["podcast"] = {
+        "url": f"{podcast_dir}/{filename}",
+        "feed": f"{podcast_dir}/feed.xml",
+        "duration": round(duration),
+        "engine": engine,
+    }
+    print(f"  {filename}: {duration / 60:.1f} Min. ({engine})")
+    return {
+        "date": edition["date"],
+        "file": filename,
+        "bytes": len(mp3),
+        "duration": round(duration),
+        "lead": edition["lead"]["headline"],
+        "chapters": [{"title": c["title"], "start": c["start"]} for c in chapters],
+    }
+
+
+def write_podcast_feed(episodes, podcast_dir, paper_title):
+    """Privater Podcast-Feed: itunes:block hält ihn aus Verzeichnissen, der Pfad ist geheim."""
+    base = site_base()
+    items = []
+    for ep in episodes:
+        chapters = ep.get("chapters", [])
+        description = "\n".join([f"Schwerpunkt: {ep.get('lead', '')}", ""] + [f"{timestamp(c['start'])} {c['title']}" for c in chapters])
+        psc = "".join(f'<psc:chapter start="{timestamp(c["start"], True)}" title={quoteattr(c["title"])}/>' for c in chapters)
+        published = datetime.fromisoformat(ep["date"]).replace(hour=6, tzinfo=TZ)
+        items.append(f"""    <item>
+      <title>{escape(german_date(ep["date"]))}</title>
+      <description>{escape(description)}</description>
+      <enclosure url={quoteattr(base + podcast_dir + "/" + ep["file"])} length="{ep["bytes"]}" type="audio/mpeg"/>
+      <guid isPermaLink="false">morgenblatt-{ep["date"]}</guid>
+      <pubDate>{format_datetime(published)}</pubDate>
+      <itunes:duration>{ep["duration"]}</itunes:duration>
+      <psc:chapters version="1.2">{psc}</psc:chapters>
+    </item>""")
+
+    feed = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:psc="http://podlove.org/simple-chapters">
+  <channel>
+    <title>{escape(paper_title.title())} – Hörausgabe</title>
+    <link>{escape(base or "./")}</link>
+    <description>Meine tägliche Zeitung zum Hören.</description>
+    <language>de-at</language>
+    <itunes:author>{escape(paper_title.title())}</itunes:author>
+    <itunes:image href={quoteattr(base + "icons/podcast-cover.png")}/>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:block>Yes</itunes:block>
+    <podcast:locked>yes</podcast:locked>
+{chr(10).join(items)}
+  </channel>
+</rss>
+"""
+    with open(out(podcast_dir, "feed.xml"), "w", encoding="utf-8") as f:
+        f.write(feed)
+
+
+def publish_podcast(episode, podcast_dir, keep, paper_title):
+    episodes = [e for e in read_json(out(podcast_dir, "episodes.json"), []) if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.mp3", e.get("file", ""))]
+    if episode:
+        episodes = [e for e in episodes if e["date"] != episode["date"]] + [episode]
+    episodes.sort(key=lambda e: e["date"], reverse=True)
+    for old in episodes[keep:]:
+        with suppress(OSError):
+            os.remove(out(podcast_dir, old["file"]))
+    episodes = [e for e in episodes[:keep] if os.path.exists(out(podcast_dir, e["file"]))]
+    if episodes:
+        write_json(out(podcast_dir, "episodes.json"), episodes, indent=1)
+        write_podcast_feed(episodes, podcast_dir, paper_title)
+
+
+# ───────────────────────── 6. Veröffentlichen ─────────────────────────
+
+def out(*parts):
+    return os.path.join(OUT_DIR, *parts)
+
+
+def site_base():
+    return SITE_URL.rstrip("/") + "/" if SITE_URL else ""
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, data, **kwargs):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, **kwargs)
+
+
+def podcast_path():
+    """Mit Passwort liegt der Podcast unter einem geheimen Pfad, den nur die entschlüsselte Ausgabe kennt."""
+    if not PASSWORD:
+        return "podcast"
+    return "podcast/" + hashlib.sha256(f"morgenblatt-podcast:{PASSWORD}".encode()).hexdigest()[:24]
+
+
+def encrypt(edition):
+    """AES-256-GCM mit PBKDF2-Schlüssel – entschlüsselt wird im Browser per WebCrypto."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    salt, iv = os.urandom(16), os.urandom(12)
+    key = hashlib.pbkdf2_hmac("sha256", PASSWORD.encode("utf-8"), salt, KDF_ITERATIONS, dklen=32)
+    data = AESGCM(key).encrypt(iv, gzip.compress(json.dumps(edition, ensure_ascii=False).encode("utf-8")), None)
+    b64 = lambda b: base64.b64encode(b).decode("ascii")
+    return {
+        "version": 2, "encrypted": True, "date": edition["date"], "generated_at": edition["generated_at"],
+        "kdf": "PBKDF2-SHA256", "iterations": KDF_ITERATIONS, "salt": b64(salt), "iv": b64(iv), "data": b64(data),
+    }
+
+
+def decrypt(payload):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    raw = lambda k: base64.b64decode(payload[k])
+    key = hashlib.pbkdf2_hmac("sha256", PASSWORD.encode("utf-8"), raw("salt"), payload["iterations"], dklen=32)
+    return json.loads(gzip.decompress(AESGCM(key).decrypt(raw("iv"), raw("data"), None)))
+
+
+def readable(payload):
+    """Passt eine (alte) Ausgabe zum aktuellen Modus? Öffentlich bleibt öffentlich, privat nur mit diesem Passwort."""
+    if not isinstance(payload, dict) or payload.get("version") != 2:
+        return False
+    if not PASSWORD:
+        return not payload.get("encrypted")
+    if not payload.get("encrypted"):
+        return False
+    try:
+        decrypt(payload)
+        return True
+    except Exception:
+        return False
+
+
+def restore_from_site(podcast_dir, with_current=False):
+    """Pages ersetzt bei jedem Deploy die ganze Seite. Archiv und alte Podcast-Folgen holen wir
+    deshalb von der live-Seite zurück, bevor die neue Ausgabe dazukommt."""
+    base = site_base()
+    if not base:
+        return
+
+    def grab(rel):
+        target = out(rel)
+        if os.path.exists(target):
+            return
+        try:
+            request = urllib.request.Request(base + rel, headers={"User-Agent": "Morgenblatt"})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                data = response.read()
+        except Exception:
+            return
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "wb") as f:
+            f.write(data)
+
+    for rel in ["archiv/index.json", f"{podcast_dir}/episodes.json", f"{podcast_dir}/feed.xml"] + ([EDITION_FILE] if with_current else []):
+        grab(rel)
+    for entry in read_json(out("archiv", "index.json"), {}).get("editions", []):
+        if re.fullmatch(r"archiv/\d{4}-\d{2}-\d{2}\.json", entry.get("file", "")):
+            grab(entry["file"])
+    for ep in read_json(out(podcast_dir, "episodes.json"), []):
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.mp3", ep.get("file", "")):
+            grab(f"{podcast_dir}/{ep['file']}")
+
+
+def publish_edition(edition, keep_days):
+    payload = encrypt(edition) if PASSWORD else edition
+    write_json(out(EDITION_FILE), payload)
+
+    # Archiv: eine Datei pro Tag; ältere und nicht mehr lesbare (z. B. altes Passwort) fliegen raus
+    rel = f"archiv/{edition['date']}.json"
+    write_json(out(rel), payload)
+    previous = [
+        e for e in read_json(out("archiv", "index.json"), {}).get("editions", [])
+        if e.get("date") != edition["date"] and re.fullmatch(r"archiv/\d{4}-\d{2}-\d{2}\.json", e.get("file", ""))
+    ]
+    still_readable = [e for e in previous if readable(read_json(out(e["file"]), None))]
+    index = sorted(still_readable + [{"date": edition["date"], "file": rel}], key=lambda e: e["date"], reverse=True)
+    for old in [e for e in previous if e not in still_readable] + index[keep_days:]:
+        with suppress(OSError):
+            os.remove(out(old["file"]))
+    write_json(out("archiv", "index.json"), {"editions": index[:keep_days]}, indent=1)
+
+
+def run():
+    with open(CONFIG_FILE, encoding="utf-8") as f:
+        config = json.load(f)
+    settings = config.get("einstellungen", {})
+    podcast_settings = config.get("podcast", {})
+    podcast_dir = podcast_path()
+    os.makedirs(OUT_DIR, exist_ok=True)
+
+    if os.environ.get("NUR_FRONTEND") == "true":
+        restore_from_site(podcast_dir, with_current=True)
+        if readable(read_json(out(EDITION_FILE), None)):
+            print("Nur Oberfläche neu veröffentlicht – Ausgabe, Archiv und Podcast bleiben.")
+            return
+        print("Keine passende Ausgabe online – baue eine neue.")
+        with suppress(OSError):
+            os.remove(out(EDITION_FILE))
+    else:
+        restore_from_site(podcast_dir)
+
+    if not PASSWORD:
+        print("Hinweis: Kein MORGENBLATT_PASSWORT gesetzt – die Seite ist öffentlich, daher ohne Volltexte.")
+
+    edition, client = build_edition(config)
+    episode = make_podcast(edition, podcast_settings, client, podcast_dir)
+    publish_podcast(episode, podcast_dir, podcast_settings.get("folgen_behalten", 7), edition["title"])
+    publish_edition(edition, settings.get("archiv_tage", 14))
+
+    full = sum(a["full_text"] for a in edition["articles"])
+    mode = "verschlüsselt" if PASSWORD else "öffentlich"
+    print(f"{EDITION_FILE} geschrieben ({mode}): {len(edition['articles'])} Artikel, davon {full} mit Volltext.")
 
 
 if __name__ == "__main__":

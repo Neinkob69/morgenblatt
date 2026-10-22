@@ -228,6 +228,7 @@
 
       <div class="flex items-center gap-3 ml-auto">
         <span id="sync-status" class="text-[var(--accent-green)] font-bold">Lade Ausgabe...</span>
+        <select id="archiveSelect" onchange="showEdition(this.value)" class="hidden bg-transparent border border-[var(--rule-light)] px-1.5 py-0.5 text-[var(--ink-primary)] focus:outline-none cursor-pointer" title="Archiv"></select>
         <span class="text-[var(--rule-light)]">|</span>
         <button onclick="toggleSourcesModal(true)" class="hover:underline text-[var(--ink-secondary)] hidden sm:inline">Quellen & App</button>
         <span class="text-[var(--rule-light)] hidden sm:inline">|</span>
@@ -382,7 +383,7 @@
         </div>
         <div>
           <div class="font-mono-meta text-[10px] uppercase tracking-widest font-bold text-[var(--ink-primary)]">Verbundene Systeme</div>
-          <p class="mt-1 font-mono-meta text-[11px] leading-relaxed text-[var(--ink-muted)]">GitHub Actions • Gemini JSON API • RSS-Volltext-Pipeline • Offline-fähig (PWA)</p>
+          <p class="mt-1 font-mono-meta text-[11px] leading-relaxed text-[var(--ink-muted)]">GitHub Actions • Gemini JSON & TTS • RSS-Volltext-Pipeline • Verschlüsselt (AES-GCM) • Offline-fähig (PWA)</p>
         </div>
         <div class="md:text-right flex flex-col justify-between">
           <div>
@@ -432,6 +433,20 @@
     <div class="nano-help">Rad drehen = blättern · Mitte = auswählen · Menu = zurück · ↑↓ ↵ Esc · <button onclick="setView('paper')">Zeitungsansicht</button></div>
   </div>
 
+  <!-- SCHLOSS: private Ausgabe -->
+  <div id="lockScreen" class="fixed inset-0 z-[70] hidden overflow-y-auto bg-[var(--paper-bg)]">
+    <form onsubmit="submitPassword(event)" class="min-h-full flex flex-col items-center justify-center text-center px-6 py-12 max-w-md mx-auto">
+      <div id="lockDate" class="font-mono-meta text-[10px] uppercase tracking-[0.25em] text-[var(--ink-muted)] mb-2"></div>
+      <div id="lockTitle" class="font-masthead text-5xl sm:text-6xl font-black tracking-tight leading-none uppercase">MORGENBLATT</div>
+      <div class="w-full double-rule-top bold-rule-bottom my-5 py-1.5 font-mono-meta text-[10px] uppercase tracking-widest text-[var(--accent-red)]">Private Ausgabe</div>
+      <p class="font-serif-body italic text-[var(--ink-secondary)] mb-5">Diese Zeitung ist verschlüsselt. Mit dem Passwort schlägst du sie auf – es bleibt auf diesem Gerät gespeichert.</p>
+      <input type="text" name="username" value="morgenblatt" autocomplete="username" class="hidden" aria-hidden="true" tabindex="-1">
+      <input id="lockInput" type="password" autocomplete="current-password" placeholder="Passwort" required class="w-full bg-[var(--paper-elevated)] border border-[var(--rule-heavy)] px-3 py-2.5 font-mono-meta text-sm focus:outline-none">
+      <button id="lockButton" class="w-full mt-3 bg-[var(--ink-primary)] text-[var(--paper-bg)] font-mono-meta text-xs uppercase tracking-widest font-bold py-3 hover:bg-[var(--accent-red)] transition disabled:opacity-50">Aufschlagen →</button>
+      <div id="lockError" class="font-mono-meta text-[11px] text-[var(--accent-red)] mt-3 min-h-[1em]"></div>
+    </form>
+  </div>
+
   <!-- LESE-MODAL -->
   <div id="readerModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-xs overflow-y-auto p-2 sm:p-6" onclick="if (event.target === this) closeReader()">
     <article class="max-w-3xl mx-auto bg-[var(--paper-bg)] border-2 border-[var(--rule-heavy)] p-5 sm:p-10 my-4 relative shadow-2xl">
@@ -454,9 +469,7 @@
       <div id="modalAudio" class="my-4"></div>
       <figure id="modalFigure" class="my-5"></figure>
       <div id="modalBody" class="article-body font-serif-body text-lg leading-relaxed text-[var(--ink-primary)]"></div>
-      <div id="modalTeaserNote" class="mt-6 p-3 border border-dashed border-[var(--rule-light)] font-mono-meta text-[11px] text-[var(--ink-muted)] hidden">
-        Der Feed liefert nur einen Auszug und die Seite ließ sich nicht automatisch laden. Den ganzen Text gibt's beim Original.
-      </div>
+      <div id="modalTeaserNote" class="mt-6 p-3 border border-dashed border-[var(--rule-light)] font-mono-meta text-[11px] text-[var(--ink-muted)] hidden"></div>
       <div class="mt-8 pt-4 bold-rule-top flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <a id="modalExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Originalartikel auf der Quell-Website öffnen ↗</a>
         <button onclick="closeReader()" class="font-mono-meta text-[11px] uppercase underline text-[var(--ink-secondary)]">Zurück zur Zeitung</button>
@@ -472,8 +485,17 @@
         <button onclick="toggleSourcesModal(false)" class="font-mono-meta text-xs uppercase font-bold px-2.5 py-1 bg-[var(--ink-primary)] text-[var(--paper-bg)]">✕</button>
       </div>
       <div id="sourcesList" class="space-y-5 text-sm"></div>
+      <div id="podcastBox" class="hidden mt-6 pt-4 bold-rule-top">
+        <div class="font-mono-meta text-[11px] uppercase tracking-widest font-bold mb-2">● Hörausgabe als Podcast</div>
+        <p class="font-serif-body text-sm text-[var(--ink-secondary)] mb-2">Diese Adresse in deiner Podcast-App hinzufügen (Apple Podcasts: Mediathek → „Sendung per URL folgen“). Sie ist privat – nicht teilen.</p>
+        <div class="flex gap-2">
+          <input id="podcastFeedUrl" readonly class="flex-1 min-w-0 bg-[var(--paper-elevated)] border border-[var(--rule-light)] px-2 py-1.5 font-mono-meta text-[11px]" onclick="this.select()">
+          <button id="copyFeedBtn" onclick="copyPodcastFeed()" class="font-mono-meta text-[11px] uppercase font-bold px-3 py-1.5 bg-[var(--ink-primary)] text-[var(--paper-bg)]">Kopieren</button>
+        </div>
+      </div>
       <div class="mt-6 pt-4 bold-rule-top space-y-2 font-serif-body text-sm text-[var(--ink-secondary)]">
-        <p><a href="feeds.opml" download class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">feeds.opml herunterladen ↓</a> – zum Import in jeden anderen Reader.</p>
+        <p id="privacyNote"></p>
+        <p><button onclick="downloadOpml()" class="font-mono-meta text-xs uppercase font-bold underline text-[var(--accent-red)]">Feeds als OPML herunterladen ↓</button> – zum Import in jeden anderen Reader.</p>
         <p>Feeds ändern: <code class="font-mono-meta text-xs">feeds.json</code> im Repository bearbeiten, die nächste Ausgabe übernimmt sie.</p>
         <p><b>Als App:</b> iPhone – Safari → Teilen → „Zum Home-Bildschirm“. Android/Chrome – Menü → „App installieren“. <button id="installBtn" onclick="installApp()" class="hidden underline font-bold text-[var(--accent-red)]">Jetzt installieren</button></p>
         <p>Die ganze Ausgabe wird beim Öffnen gespeichert und ist danach auch offline lesbar – etwa in der U-Bahn.</p>
@@ -527,31 +549,148 @@
       });
     }
 
-    // ───────── Ausgabe laden ─────────
-    fetch('edition.json', { cache: 'no-store' })
-      .then(res => res.json())
-      .then(initEdition)
-      .catch(err => {
+    function fmtShortDate(date) {
+      return date ? new Date(date + 'T12:00:00').toLocaleDateString('de-AT', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+    }
+    function fmtLongDate(date) {
+      return date ? new Date(date + 'T12:00:00').toLocaleDateString('de-AT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    }
+
+    // ───────── Private Ausgabe: im Browser entschlüsseln ─────────
+    // Die Action verschlüsselt die Ausgabe mit AES-GCM (Schlüssel per PBKDF2 aus dem Passwort).
+    // Ohne Passwort sieht niemand die Artikel – die Seite ist dann so privat wie ein Login bei Feedly.
+    const b64bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+    let lockWaiter = null;
+
+    async function decryptEdition(payload, password) {
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: b64bytes(payload.salt), iterations: payload.iterations, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+      const zipped = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64bytes(payload.iv) }, key, b64bytes(payload.data));
+      return JSON.parse(await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+    }
+
+    async function unlock(payload) {
+      const saved = store.get('passwort', '');
+      const data = saved ? await decryptEdition(payload, saved).catch(() => null) : null;
+      if (data) return data;
+      return new Promise(resolve => {
+        lockWaiter = { payload, resolve };
+        $('#lockDate').innerText = fmtLongDate(payload.date).toUpperCase();
+        $('#lockTitle').innerText = paperTitle();
+        $('#lockError').innerText = saved ? 'Das gespeicherte Passwort passt nicht mehr.' : '';
+        if (!window.crypto?.subtle || !window.DecompressionStream) $('#lockError').innerText = 'Dieser Browser kann die Ausgabe nicht entschlüsseln (HTTPS und aktueller Browser nötig).';
+        $('#lockScreen').classList.remove('hidden');
+        setTimeout(() => $('#lockInput').focus(), 50);
+      });
+    }
+
+    async function submitPassword(event) {
+      event.preventDefault();
+      if (!lockWaiter) return;
+      const password = $('#lockInput').value;
+      $('#lockButton').disabled = true;
+      $('#lockError').innerText = 'Schlage auf …';
+      try {
+        const data = await decryptEdition(lockWaiter.payload, password);
+        store.set('passwort', password);
+        $('#lockScreen').classList.add('hidden');
+        $('#lockInput').value = '';
+        const { resolve } = lockWaiter;
+        lockWaiter = null;
+        resolve(data);
+      } catch (err) {
+        $('#lockError').innerText = 'Falsches Passwort.';
+      } finally {
+        $('#lockButton').disabled = false;
+      }
+    }
+
+    function forgetPassword() {
+      store.set('passwort', '');
+      location.reload();
+    }
+
+    // ───────── Ausgabe laden (aktuell oder aus dem Archiv) ─────────
+    const CURRENT = 'edition.json';
+    let currentFile = null;
+    let latestDate = null;
+    let archiveList = [];
+
+    async function loadEditionFile(file) {
+      const res = await fetch(file, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`${file}: ${res.status}`);
+      const payload = await res.json();
+      return payload.encrypted ? unlock(payload) : payload;
+    }
+
+    async function showEdition(file) {
+      if (file !== CURRENT && !/^archiv\/[\d-]+\.json$/.test(file)) return;
+      try {
+        $('#sync-status').innerText = 'Lade Ausgabe...';
+        initEdition(await loadEditionFile(file), file);
+      } catch (err) {
         console.error(err);
         $('#sync-status').innerText = 'Ladefehler';
         $('#sync-status').className = 'text-red-700 font-bold';
-      });
+      }
+    }
 
-    function initEdition(data) {
+    function loadArchiveIndex() {
+      fetch('archiv/index.json', { cache: 'no-store' })
+        .then(res => res.ok ? res.json() : {})
+        .catch(() => ({}))
+        .then(index => {
+          archiveList = (index.editions || []).filter(e => e.date !== latestDate && /^archiv\/[\d-]+\.json$/.test(e.file));
+          renderArchiveSelect();
+          if (document.documentElement.dataset.view === 'nano' && nanoStack.length === 1) nanoRefresh();
+        });
+    }
+
+    function renderArchiveSelect() {
+      const select = $('#archiveSelect');
+      select.classList.toggle('hidden', !archiveList.length);
+      select.innerHTML = `<option value="${CURRENT}">Aktuelle Ausgabe</option>` +
+        archiveList.map(e => `<option value="${esc(e.file)}">Archiv: ${esc(fmtShortDate(e.date))}</option>`).join('');
+      select.value = currentFile || CURRENT;
+    }
+
+    showEdition(CURRENT).then(loadArchiveIndex);
+
+    function initEdition(data, file = CURRENT) {
+      const firstLoad = !edition;
+      if (!firstLoad) {
+        stopAudioBriefing();
+        if (readerId) { hideReader(); readerPushed = false; }
+      }
       edition = data;
+      currentFile = file;
+      if (file === CURRENT) latestDate = data.date || latestDate;
       sections = data.sections || [];
       sectionById = Object.fromEntries(sections.map(s => [s.id, s]));
       articles = (data.articles || []).filter(a => sectionById[a.section]);
       byId = Object.fromEntries(articles.map(a => [a.id, a]));
+      currentSection = 'all';
+      $('#keywordSearchInput').value = '';
+      $('#frontPageSpread').classList.remove('hidden');
 
       // Kopfzeile: Datum & Stand der Ausgabe
       const created = new Date(data.generated_at);
       const ageHours = (Date.now() - created) / 36e5;
       $('#currentDateDisplay').innerText = created.toLocaleDateString('de-AT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
       const status = $('#sync-status');
-      status.innerText = ageHours > 26 ? `Ausgabe von ${timeAgo(data.generated_at)}` : `Ausgabe ${created.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })} ✓`;
-      if (ageHours > 26) status.className = 'text-[var(--accent-red)] font-bold';
-      $('#editionBadge').innerText = data.ai ? 'Ausgabe Wien • KI Kuratiert' : 'Ausgabe Wien • ohne KI-Redaktion';
+      status.className = 'text-[var(--accent-green)] font-bold';
+      if (file !== CURRENT) {
+        status.innerText = 'Archiv-Ausgabe';
+        status.className = 'text-[var(--accent-red)] font-bold';
+      } else if (ageHours > 26) {
+        status.innerText = `Ausgabe von ${timeAgo(data.generated_at)}`;
+        status.className = 'text-[var(--accent-red)] font-bold';
+      } else {
+        status.innerText = `Ausgabe ${created.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' })} ✓`;
+      }
+      $('#editionBadge').innerText = `Ausgabe Wien • ${data.ai ? 'KI Kuratiert' : 'ohne KI-Redaktion'}${data.private ? ' • Privat' : ''}`;
       $('#editionCount').innerText = `${articles.length} MELDUNGEN`;
 
       applyPaperName(store.get('paperName', $('#paperNameSelect').options[0].value));
@@ -560,10 +699,13 @@
       renderArticles();
       renderChapterPills();
       renderSources();
+      renderArchiveSelect();
+      updateAudioUI();
       if (document.documentElement.dataset.view === 'nano') nanoStart();
+      if (!firstLoad) window.scrollTo({ top: 0 });
 
       const match = location.hash.match(/^#a=([\w-]+)/);
-      if (match && byId[match[1]]) openReader(match[1], 'replace');
+      if (firstLoad && match && byId[match[1]]) openReader(match[1], 'replace');
     }
 
     // ───────── Navigation (Ressorts) ─────────
@@ -753,6 +895,9 @@
       fixMedia(body);
       fixMedia($('#modalFigure'));
       $('#modalTeaserNote').classList.toggle('hidden', !!art.full_text);
+      $('#modalTeaserNote').textContent = edition.private
+        ? 'Der Feed liefert nur einen Auszug und die Seite ließ sich nicht automatisch laden. Den ganzen Text gibt\'s beim Original.'
+        : 'Öffentliche Ausgabe: hier steht nur ein Anriss. Den ganzen Text gibt\'s beim Original – oder in der privaten Ausgabe mit Passwort.';
       $('#modalExternalLink').href = safeUrl(art.link) || '#';
 
       const list = articles.filter(a => a.section === art.section);
@@ -808,6 +953,14 @@
               </li>`).join('')}
             </ul>
           </div>`).join('');
+
+      const feed = edition.podcast?.feed;
+      $('#podcastBox').classList.toggle('hidden', !feed);
+      $('#podcastFeedUrl').value = feed ? new URL(feed, location.href).href : '';
+      $('#copyFeedBtn').innerText = 'Kopieren';
+      $('#privacyNote').innerHTML = edition.private
+        ? '🔒 <b>Private Ausgabe:</b> verschlüsselt und nur mit Passwort lesbar – wie dein Konto bei einem RSS-Reader. <button onclick="forgetPassword()" class="underline">Passwort auf diesem Gerät vergessen</button>'
+        : '⚠ <b>Öffentliche Ausgabe:</b> deshalb nur Anrisse statt ganzer Artikel. Mit dem Secret <code class="font-mono-meta text-xs">MORGENBLATT_PASSWORT</code> wird sie privat und bekommt die Volltexte.';
     }
 
     function toggleSourcesModal(open) {
@@ -815,9 +968,61 @@
       document.body.style.overflow = open ? 'hidden' : '';
     }
 
-    // ───────── Hörausgabe (Sprachausgabe im Browser) ─────────
+    // Die Feed-Liste steckt (verschlüsselt) in der Ausgabe – OPML entsteht erst hier im Browser
+    function downloadOpml() {
+      const body = sections.map(s => `    <outline text="${esc(s.name)}">\n` +
+        (s.feeds || []).map(f => `      <outline type="rss" text="${esc(f.name)}" xmlUrl="${esc(f.url)}"/>`).join('\n') + '\n    </outline>').join('\n');
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n  <head><title>${esc(paperTitle())} – Quellen</title></head>\n  <body>\n${body}\n  </body>\n</opml>\n`;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([xml], { type: 'text/x-opml' }));
+      link.download = 'morgenblatt-feeds.opml';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+
+    function copyPodcastFeed() {
+      const input = $('#podcastFeedUrl');
+      const done = () => { $('#copyFeedBtn').innerText = 'Kopiert ✓'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(input.value).then(done).catch(() => { input.select(); });
+      else { input.select(); document.execCommand('copy'); done(); }
+    }
+
+    // ───────── Hörausgabe ─────────
+    // Gibt's eine MP3 aus der Action, läuft die (mit Kapitelmarken) – sonst liest der Browser selbst vor.
     const tts = { idx: 0, chunks: [], chunk: 0, playing: false, rate: 1.0, token: 0 };
+    const mp3 = new Audio();
+    mp3.preload = 'none';
     const chapters = () => edition?.briefing || [];
+    const podcastSrc = () => /^[\w\/.-]+\.mp3$/.test(edition?.podcast?.url || '') ? edition.podcast.url : '';
+    const useMp3 = () => !!podcastSrc();
+    const fmtClock = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+
+    function audioActive() {
+      return useMp3() ? !!mp3.getAttribute('src') && (mp3.currentTime > 0 || !mp3.paused) : tts.chunks.length > 0;
+    }
+    function audioPlaying() {
+      return useMp3() ? !mp3.paused : tts.playing;
+    }
+    function audioChapter() {
+      if (!useMp3()) return tts.idx;
+      let idx = 0;
+      chapters().forEach((c, i) => { if ((c.start ?? Infinity) <= mp3.currentTime + 0.3) idx = i; });
+      return idx;
+    }
+    function chapterProgress() {
+      if (useMp3()) return mp3.duration ? Math.round((mp3.currentTime / mp3.duration) * 100) : 0;
+      return tts.chunks.length ? Math.round((tts.chunk / tts.chunks.length) * 100) : 0;
+    }
+    function chapterLength(i) {
+      const list = chapters();
+      if (useMp3() && list[i]?.start != null) return (list[i + 1]?.start ?? edition.podcast.duration) - list[i].start;
+      return Math.round(list[i].text.split(/\s+/).length / 2.5);   // grob: 150 Wörter pro Minute
+    }
+    function ensureMp3() {
+      if (mp3.getAttribute('src') !== podcastSrc()) mp3.src = podcastSrc();
+      mp3.defaultPlaybackRate = mp3.playbackRate = tts.rate;
+    }
+    ['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(ev => mp3.addEventListener(ev, () => updateAudioUI()));
 
     function renderChapterPills() {
       $('#chapterPills').innerHTML = chapters().map((c, i) => `
@@ -842,8 +1047,14 @@
     }
 
     function playSpecificChapter(index) {
-      if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
       if (!chapters()[index]) return;
+      if (useMp3()) {
+        ensureMp3();
+        mp3.currentTime = chapters()[index].start || 0;
+        mp3.play().catch(() => {});
+        return;
+      }
+      if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
       speechSynthesis.cancel();
       tts.idx = index;
       tts.chunks = splitForSpeech(chapters()[index].text);
@@ -881,40 +1092,71 @@
       speakChunk();
     }
     function stopAudioBriefing() {
+      mp3.pause();
+      if (mp3.getAttribute('src')) { mp3.removeAttribute('src'); mp3.load(); }
       tts.playing = false; tts.token++; tts.chunks = []; tts.chunk = 0; tts.idx = 0;
       if ('speechSynthesis' in window) speechSynthesis.cancel();
       updateAudioUI();
     }
     function toggleAudioBriefing() {
+      if (useMp3()) {
+        ensureMp3();
+        mp3.paused ? mp3.play().catch(() => {}) : mp3.pause();
+        return;
+      }
       if (!('speechSynthesis' in window)) return alert('Sprachausgabe wird vom Browser nicht unterstützt.');
       tts.playing ? pauseAudioBriefing() : resumeAudioBriefing();
     }
     function skipChapter(dir) {
-      const next = tts.idx + dir;
+      const current = audioChapter();
+      // wie beim iPod: ◀◀ springt erst an den Anfang des laufenden Kapitels
+      if (useMp3() && dir < 0 && mp3.currentTime - (chapters()[current]?.start || 0) > 3) return playSpecificChapter(current);
+      const next = current + dir;
       if (next >= 0 && next < chapters().length) playSpecificChapter(next);
     }
     function cycleSpeechRate() {
       const rates = [1.0, 1.2, 1.4];
       tts.rate = rates[(rates.indexOf(tts.rate) + 1) % rates.length];
       $('#speechRateBtn').textContent = `${tts.rate.toFixed(1)}×`;
+      mp3.defaultPlaybackRate = mp3.playbackRate = tts.rate;
       if (tts.playing) { tts.token++; speechSynthesis.cancel(); speakChunk(); }
     }
-    function chapterProgress() {
-      return tts.chunks.length ? Math.round((tts.chunk / tts.chunks.length) * 100) : 0;
-    }
 
+    let lastChapter = -1;
     function updateAudioUI() {
-      const active = tts.chunks.length > 0;
-      const chapter = chapters()[tts.idx];
-      $('#playIcon').textContent = tts.playing ? '⏸' : '▶';
-      $('#audioEarBox').classList.toggle('playing', tts.playing);
-      $('#audioTrackTitle').textContent = active && chapter ? `${tts.playing ? 'Liest' : 'Pausiert'}: ${String(tts.idx + 1).padStart(2, '0')} ${chapter.title}` : 'Tages-Briefing abspielen';
-      $('#audioProgressBar').style.width = active ? `${Math.max(3, chapterProgress())}%` : '0%';
+      const active = audioActive();
+      const playing = audioPlaying();
+      const idx = audioChapter();
+      const chapter = chapters()[idx];
+      $('#playIcon').textContent = playing ? '⏸' : '▶';
+      $('#audioEarBox').classList.toggle('playing', playing);
+      let title = useMp3() && edition.podcast.duration ? `Hörausgabe abspielen · ${fmtClock(edition.podcast.duration)}` : 'Tages-Briefing abspielen';
+      if (active && chapter) title = `${playing ? (useMp3() ? 'Läuft' : 'Liest') : 'Pausiert'}: ${String(idx + 1).padStart(2, '0')} ${chapter.title}`;
+      $('#audioTrackTitle').textContent = title;
+      $('#audioProgressBar').style.width = active ? `${Math.max(2, chapterProgress())}%` : '0%';
       document.querySelectorAll('.chapter-pill').forEach((el, i) => {
-        const on = active && i === tts.idx;
+        const on = active && i === idx;
         ['border-[var(--accent-red)]', 'font-bold', 'text-[var(--accent-red)]'].forEach(c => el.classList.toggle(c, on));
       });
+      if (idx !== lastChapter || !active) { lastChapter = idx; updateMediaSession(); }
       nanoAudioChanged();
+    }
+
+    // Sperrbildschirm & Kopfhörer-Tasten: Titel, Cover, Kapitel vor/zurück
+    function updateMediaSession() {
+      if (!('mediaSession' in navigator) || !useMp3() || typeof MediaMetadata === 'undefined') return;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: chapters()[audioChapter()]?.title || 'Hörausgabe',
+        artist: paperTitle(),
+        album: `Hörausgabe · ${fmtLongDate(edition.date)}`,
+        artwork: [{ src: 'icons/podcast-cover.png', sizes: '1400x1400', type: 'image/png' }],
+      });
+    }
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('previoustrack', () => skipChapter(-1));
+        navigator.mediaSession.setActionHandler('nexttrack', () => skipChapter(1));
+      } catch (e) {}
     }
 
     // ───────── Extras ─────────
@@ -978,14 +1220,16 @@
 
     function nanoRootPage() {
       return {
-        title: () => paperTitle(),
+        title: () => currentFile && currentFile !== CURRENT ? fmtShortDate(edition.date) : paperTitle(),
         build: () => [
-          ...(tts.chunks.length ? [{ label: 'Läuft gerade', go: nanoNowPlaying }] : []),
+          ...(currentFile && currentFile !== CURRENT ? [{ label: 'Zur aktuellen Ausgabe', go: () => { showEdition(CURRENT); }, noChevron: true }] : []),
+          ...(audioActive() ? [{ label: 'Läuft gerade', go: nanoNowPlaying }] : []),
           { label: 'Titelseite', go: () => nanoListPage('Titelseite', [edition.lead?.article, ...(edition.top || [])].filter(id => byId[id])) },
           { label: 'Ressorts', go: nanoSectionsPage },
           { label: 'Alle Meldungen', go: () => nanoListPage('Alle Meldungen', [...articles].sort(byDate).map(a => a.id)) },
           { label: 'Hörausgabe', go: nanoBriefingPage },
           ...(articles.some(a => a.audio) ? [{ label: 'Podcast-Folgen', go: () => nanoListPage('Podcasts', articles.filter(a => a.audio).sort(byDate).map(a => a.id)) }] : []),
+          ...(archiveList.length ? [{ label: 'Archiv', go: nanoArchivePage }] : []),
           { label: 'Einstellungen', go: nanoSettingsPage },
           { label: 'Zeitungsansicht', go: () => setView('paper'), noChevron: true },
         ],
@@ -1017,14 +1261,24 @@
       return { title: sectionById[byId[id].section].short, kind: 'article', id, ids };
     }
 
+    function nanoArchivePage() {
+      const pick = file => () => { showEdition(file); };
+      return {
+        title: 'Archiv',
+        build: () => [
+          { label: 'Aktuelle Ausgabe', right: currentFile === CURRENT ? '✓' : '', noChevron: true, go: pick(CURRENT) },
+          ...archiveList.map(e => ({ label: fmtLongDate(e.date), right: currentFile === e.file ? '✓' : '', noChevron: true, go: pick(e.file) })),
+        ],
+      };
+    }
+
     function nanoBriefingPage() {
-      const minutes = text => { const s = Math.round(text.split(/\s+/).length / 2.5); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
       return {
         title: 'Hörausgabe',
         empty: 'Kein Briefing in dieser Ausgabe.',
         build: () => chapters().length ? [
           { label: 'Alles abspielen', go: () => { playSpecificChapter(0); return nanoNowPlaying(); } },
-          ...chapters().map((c, i) => ({ label: c.title, right: minutes(c.text), go: () => { playSpecificChapter(i); return nanoNowPlaying(); } })),
+          ...chapters().map((c, i) => ({ label: c.title, right: fmtClock(chapterLength(i)), go: () => { playSpecificChapter(i); return nanoNowPlaying(); } })),
         ] : [],
       };
     }
@@ -1052,6 +1306,8 @@
                 { label: 'Meldungen', right: articles.length, noChevron: true, go: () => {} },
                 { label: 'Mit Volltext', right: articles.filter(a => a.full_text).length, noChevron: true, go: () => {} },
                 { label: 'KI-Redaktion', right: onOff(edition.ai), noChevron: true, go: () => {} },
+                { label: 'Private Ausgabe', right: onOff(edition.private), noChevron: true, go: () => {} },
+                { label: 'Hörausgabe', right: useMp3() ? 'MP3' : 'Browser', noChevron: true, go: () => {} },
               ],
             }) },
         ],
@@ -1072,7 +1328,7 @@
             ${a.takeaway ? `<div class="summary">${esc(a.summary)}</div>` : ''}
             ${audio ? `<audio controls preload="none" src="${esc(audio)}"></audio>` : ''}
             <div class="body">${a.content_html || `<p>${esc(a.summary)}</p>`}</div>
-            ${a.full_text ? '' : '<div class="note">Nur Auszug im Feed – Volltext beim Original.</div>'}
+            ${a.full_text ? '' : `<div class="note">${edition.private ? 'Nur Auszug im Feed' : 'Öffentliche Ausgabe: nur Anriss'} – Volltext beim Original.</div>`}
             ${safeUrl(a.link) ? `<a class="orig" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">Original öffnen ↗</a>` : ''}
           </div>`;
         fixMedia(el);
@@ -1191,7 +1447,7 @@
         if (!next) return;
         nanoStack[nanoStack.length - 1] = nanoArticlePage(next, page.ids);
         nanoRender(dir > 0 ? 'fwd' : 'back');
-      } else if (tts.chunks.length) {
+      } else if (audioActive()) {
         skipChapter(dir);
       }
     }
@@ -1213,11 +1469,14 @@
     function nanoAudioChanged() {
       const indicator = $('#nanoPlayIndicator');
       if (!indicator) return;
-      indicator.textContent = tts.playing ? '▶' : (tts.chunks.length ? '❙❙' : '');
+      indicator.textContent = audioPlaying() ? '▶' : (audioActive() ? '❙❙' : '');
       if (nanoTop()?.kind !== 'np' || !$('#npTitle')) return;
-      const chapter = chapters()[tts.idx];
-      $('#npTitle').textContent = tts.chunks.length && chapter ? chapter.title : 'Nichts läuft';
-      $('#npSub').textContent = tts.chunks.length ? `Kapitel ${tts.idx + 1} von ${chapters().length}${tts.playing ? '' : ' · pausiert'}` : 'Drück ▶❙❙ für das Briefing';
+      const active = audioActive();
+      const idx = audioChapter();
+      const chapter = chapters()[idx];
+      const clock = useMp3() && mp3.duration ? ` · ${fmtClock(mp3.currentTime)} / -${fmtClock(mp3.duration - mp3.currentTime)}` : '';
+      $('#npTitle').textContent = active && chapter ? chapter.title : 'Nichts läuft';
+      $('#npSub').textContent = active ? `Kapitel ${idx + 1} von ${chapters().length}${clock}${audioPlaying() ? '' : ' · pausiert'}` : 'Drück ▶❙❙ für die Hörausgabe';
       $('#npBar').style.width = `${chapterProgress()}%`;
     }
 

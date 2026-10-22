@@ -1,4 +1,7 @@
 feedparser>=6.0
-google-genai>=1.0
+google-genai>=2.0
 nh3>=0.2.17
 trafilatura>=2.0
+cryptography>=42
+lameenc>=1.7
+edge-tts>=7.0

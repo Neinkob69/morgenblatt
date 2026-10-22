@@ -8,7 +8,14 @@
   "einstellungen": {
     "max_artikel_pro_feed": 8,
     "max_alter_tage": 4,
-    "volltext_nachladen": true
+    "volltext_nachladen": true,
+    "archiv_tage": 14
+  },
+  "podcast": {
+    "aktiv": true,
+    "folgen_behalten": 7,
+    "stimme_gemini": "Charon",
+    "stimme_edge": "de-AT-JonasNeural"
   },
   "ressorts": [
     {

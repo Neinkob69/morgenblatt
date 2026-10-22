@@ -1,0 +1,6 @@
+# Wird von update_newspaper.py erzeugt und von der Action veröffentlicht – nicht ins Repo
+_site/
+edition.json
+archiv/
+podcast/
+__pycache__/
