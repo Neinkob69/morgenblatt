@@ -12,9 +12,9 @@ on:
         description: 'Nur die Oberfläche neu veröffentlichen (keine neue Ausgabe)'
         type: boolean
         default: false
-  push:                   # Änderungen an der Oberfläche sofort live stellen
+  push:                   # Änderungen sofort live stellen
     branches: [main]
-    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**']
+    paths: ['index.html', 'sw.js', 'manifest.webmanifest', 'icons/**', 'feeds.json', 'update_newspaper.py', 'requirements.txt']
 
 permissions:
   contents: read
@@ -51,7 +51,8 @@ jobs:
           MORGENBLATT_PASSWORT: ${{ secrets.MORGENBLATT_PASSWORT }}
           SITE_URL: ${{ steps.pages.outputs.base_url }}
           OUT_DIR: _site
-          NUR_FRONTEND: ${{ github.event_name == 'push' || inputs.nur_frontend }}
+          # Push nur an der Oberfläche → Ausgabe bleibt; neue Feeds oder Pipeline → neue Ausgabe
+          NUR_FRONTEND: ${{ (github.event_name == 'push' && !contains(toJSON(github.event.commits), 'feeds.json') && !contains(toJSON(github.event.commits), 'update_newspaper.py') && !contains(toJSON(github.event.commits), 'requirements.txt')) || inputs.nur_frontend }}
         run: |
           mkdir -p _site
           cp -r index.html sw.js manifest.webmanifest icons _site/

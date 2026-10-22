@@ -949,7 +949,7 @@
             <ul class="space-y-1">${(sec.feeds || []).map(f => `
               <li class="flex items-baseline justify-between gap-3">
                 <span class="truncate">${f.ok ? '✓' : '<span class="text-[var(--accent-red)]">✗</span>'} ${esc(f.name)}</span>
-                <span class="font-mono-meta text-[10px] text-[var(--ink-muted)] whitespace-nowrap">${f.ok ? (f.count == null ? '' : `${f.count} Artikel`) : 'nicht erreichbar'}</span>
+                <span class="font-mono-meta text-[10px] text-[var(--ink-muted)] whitespace-nowrap">${f.ok ? (f.count == null ? '' : `${f.count} Artikel`) : esc(f.error || 'nicht erreichbar')}</span>
               </li>`).join('')}
             </ul>
           </div>`).join('');

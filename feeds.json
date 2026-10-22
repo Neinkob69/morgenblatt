@@ -23,9 +23,9 @@
       "name": "Klinik-IT",
       "icon": "🏥",
       "feeds": [
-        "https://www.thelancet.com/rssfeed/landig_current.xml",
-        "https://www.kma-online.de/rss/aktuelle-meldungen.xml",
-        "https://www.e-health-com.de/rss.xml"
+        {"url": "https://www.thelancet.com/rssfeed/landig_online.xml", "max_alter_tage": 14, "max_artikel": 4},
+        "https://www.kma-online.de/dienste/feeds/aktuelles.xml",
+        "https://www.heise.de/thema/Gesundheit.xml"
       ]
     },
     {
@@ -45,10 +45,9 @@
       "kurz": "Geopolitik",
       "icon": "🌍",
       "feeds": [
-        "https://sicherheitspod.de/feed/mp3/",
+        {"url": "https://sicherheitspod.de/feed/", "max_alter_tage": 14},
         "https://warontherocks.com/feed/",
-        "https://www.swp-berlin.org/rss.xml",
-        "https://zeitschrift-ip.dgap.org/de/rss.xml"
+        "https://www.swp-berlin.org/rss.xml"
       ]
     },
     {
@@ -68,8 +67,8 @@
       "icon": "🎯",
       "telegramm": true,
       "feeds": [
-        "https://www.dartsnews.de/feed",
-        "https://www.dartn.de/rss.xml"
+        "https://news.google.com/rss/search?q=Darts+PDC&hl=de-AT&gl=AT&ceid=AT:de",
+        "https://www.dartn.de/feed/"
       ]
     }
   ]
