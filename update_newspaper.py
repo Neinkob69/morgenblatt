@@ -1,6 +1,7 @@
 import feedparser
 import json
 import os
+import time
 from google import genai
 
 FEEDS = {
@@ -36,7 +37,7 @@ def run():
         for url in urls:
             try:
                 f = feedparser.parse(url)
-                for entry in f.entries[:2]: # Begrenzt auf 2 pro Feed für maximale Stabilität
+                for entry in f.entries[:2]:
                     raw_data[cat].append({
                         "title": entry.get("title", ""),
                         "source": f.feed.get("title", url),
@@ -69,10 +70,26 @@ def run():
     {json.dumps(raw_data, ensure_ascii=False)}
     """
     
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt
-    )
+    # Warteschleife: Versuche es bis zu 3 Mal, falls der Server überlastet ist
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f"Sende Anfrage an Gemini (Versuch {attempt + 1}/{max_retries})...")
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt
+            )
+            break  # Erfolgreich! Schleife beenden.
+        except Exception as e:
+            if "503" in str(e) or "UNAVAILABLE" in str(e):
+                if attempt < max_retries - 1:
+                    print("Server ist beschäftigt. Warte 30 Sekunden...")
+                    time.sleep(30)
+                else:
+                    print("Server dauerhaft überlastet. Abbruch.")
+                    raise e
+            else:
+                raise e # Ein anderer Fehler, direkter Abbruch
     
     raw_text = response.text.strip()
     if raw_text.startswith("```json"):
