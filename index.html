@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Pulse | Personal Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .serif-title { font-family: 'Instrument Serif', serif; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-20">
+
+  <!-- Top Header / Masthead (Zeitungs-Kopf) -->
+  <header class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <span class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Personal Edition • Wien</span>
+        <h1 class="serif-title text-4xl md:text-5xl tracking-tight text-white">The Daily Briefing</h1>
+      </div>
+
+      <!-- Integrierter Podcast / Audio-Briefing Player -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex items-center gap-4 shadow-lg">
+        <button onclick="document.getElementById('briefing-audio').play()" class="w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 flex items-center justify-center font-bold transition">
+          ▶
+        </button>
+        <div class="text-xs">
+          <div class="font-semibold text-white">Morgen-Podcast (KI-Briefing)</div>
+          <div class="text-zinc-400">Alle 5 Themen in 4 Min. • <span class="text-emerald-400">Bereit</span></div>
+        </div>
+        <audio id="briefing-audio" src="daily_briefing.mp3" preload="none"></audio>
+      </div>
+    </div>
+
+    <!-- Ressort-Navigation (Filter-Tabs) -->
+    <nav class="max-w-6xl mx-auto px-4 flex gap-2 overflow-x-auto pb-3 text-sm">
+      <button onclick="filterCategory('all')" class="cat-btn bg-zinc-100 text-zinc-900 px-3 py-1 rounded-full font-medium">Alle Ressorts</button>
+      <button onclick="filterCategory('med-ai')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🏥 Medical AI & Klinik-IT</button>
+      <button onclick="filterCategory('ai')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🤖 AI & Tech</button>
+      <button onclick="filterCategory('geopolitik')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🌍 Geopolitik</button>
+      <button onclick="filterCategory('rapid')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">⚽ SK Rapid</button>
+      <button onclick="filterCategory('darts')" class="cat-btn bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">🎯 Darts</button>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-8">
+
+    <!-- Sektion 1: Das KI-Executive-Summary (Bento Box) -->
+    <section class="mb-12">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <h2 class="text-xs uppercase tracking-widest text-zinc-400 font-semibold">TL;DR – Die Ausgabe in 60 Sekunden</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Haupt-Summary: Medical AI & AI -->
+        <div class="md:col-span-2 bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
+          <span class="text-xs font-semibold text-emerald-400 uppercase">Fokus: Tech & Healthcare IT</span>
+          <h3 class="serif-title text-2xl mt-1 mb-3 text-white">KI-Arztbriefschreibung in Kliniken & neue Agenten-Frameworks</h3>
+          <p class="text-zinc-300 text-sm leading-relaxed">
+            Mehrere europäische Krankenhäuser testen lokale Sprachmodelle zur automatisierten Dokumentation in KIS-Systemen, um die Bürokratielast für Ärztinnen und Ärzte um bis zu 30 % zu senken. Parallel dazu verschiebt sich im AI-Sektor der Fokus von reinen Chatbots hin zu spezialisierten Workflow-Agenten.
+          </p>
+        </div>
+
+        <!-- Sport & Geopolitik Kompakt -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold text-amber-400 uppercase">Kompakt: Sport & Welt</span>
+            <ul class="mt-3 space-y-3 text-sm text-zinc-300">
+              <li><strong class="text-white">⚽ Rapid:</strong> Fokus auf das kommende Heimspiel in Hütteldorf, Kader-Update nach dem Abschlusstraining.</li>
+              <li><strong class="text-white">🎯 Darts:</strong> European Tour Ergebnisse & aktuelle Order of Merit Verschiebungen.</li>
+              <li><strong class="text-white">🌍 Geopolitik:</strong> Neue Analysen zur europäischen Sicherheitspolitik und Halbleiter-Lieferketten.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sektion 2: Das Magazin-Grid (Artikel-Karten) -->
+    <section>
+      <h2 class="text-xs uppercase tracking-widest text-zinc-400 font-semibold mb-4">Kuratierte Artikel der heutigen Ausgabe</h2>
+      
+      <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Beispiel-Karte 1: Medical AI -->
+        <article data-category="med-ai" class="article-card bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-5 flex flex-col justify-between transition group">
+          <div>
+            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3">
+              <span class="text-emerald-400 font-medium">🏥 Medical AI & Klinik-IT</span>
+              <span>kma Online • 3 Min. Lesezeit</span>
+            </div>
+            <h3 class="font-semibold text-lg text-white group-hover:text-emerald-400 transition mb-2">
+              Ambient Clinical Intelligence: Wie Sprach-KI die Krankenhaus-Bürokratie halbiert
+            </h3>
+            <p class="text-zinc-400 text-sm line-clamp-3">
+              Statt stundenlanger Tipparbeit im KIS erfassen spezialisierte KI-Modelle das Arzt-Patienten-Gespräch und generieren strukturierte Entlassungsbriefe direkt zur Freigabe.
+            </p>
+          </div>
+          <a href="#" class="mt-4 inline-flex items-center text-xs font-semibold text-zinc-300 group-hover:text-white">
+            Artikel lesen →
+          </a>
+        </article>
+
+        <!-- Beispiel-Karte 2: SK Rapid -->
+        <article data-category="rapid" class="article-card bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-5 flex flex-col justify-between transition group">
+          <div>
+            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3">
+              <span class="text-green-400 font-medium">⚽ SK Rapid</span>
+              <span>Kurier / Laola1 • 2 Min.</span>
+            </div>
+            <h3 class="font-semibold text-lg text-white group-hover:text-green-400 transition mb-2">
+              Grün-Weiße Personalrochade vor dem nächsten Bundesliga-Kracher
+            </h3>
+            <p class="text-zinc-400 text-sm line-clamp-3">
+              In Hütteldorf laufen die Vorbereitungen auf Hochtouren. Welche taktischen Optionen sich im Mittelfeld bieten und wer rechtzeitig fit wird.
+            </p>
+          </div>
+          <a href="#" class="mt-4 inline-flex items-center text-xs font-semibold text-zinc-300 group-hover:text-white">
+            Artikel lesen →
+          </a>
+        </article>
+
+        <!-- Beispiel-Karte 3: Darts -->
+        <article data-category="darts" class="article-card bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl p-5 flex flex-col justify-between transition group">
+          <div>
+            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3">
+              <span class="text-amber-400 font-medium">🎯 Darts</span>
+              <span>Dartsnews • 2 Min.</span>
+            </div>
+            <h3 class="font-semibold text-lg text-white group-hover:text-amber-400 transition mb-2">
+              PDC ProTour: High-Averages und Überraschungen bei den Players Championships
+            </h3>
+            <p class="text-zinc-400 text-sm line-clamp-3">
+              Mit mehreren 105+ Averages zeigten die Top-Gesetzten starke Nerven an den Boards. Ein Überblick über alle Ergebnisse und das aktuelle Major-Race.
+            </p>
+          </div>
+          <a href="#" class="mt-4 inline-flex items-center text-xs font-semibold text-zinc-300 group-hover:text-white">
+            Artikel lesen →
+          </a>
+        </article>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function filterCategory(cat) {
+      document.querySelectorAll('.article-card').forEach(card => {
+        if (cat === 'all' || card.dataset.category === cat) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
