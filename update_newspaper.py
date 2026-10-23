@@ -403,6 +403,8 @@ def describe_extras(extras, date):
         lines.append("Namenstage: " + ", ".join(today["name_days"]))
     if extras.get("football") and (football := describe_football(extras["football"])):
         lines.append(f"Fußball – {football} (gern im passenden Sport-Kapitel erwähnen)")
+    if extras.get("formula1") and (formula1 := describe_formula1(extras["formula1"])):
+        lines.append(f"Formel 1 – {formula1} (gern im Formel-1-Kapitel erwähnen)")
     events = "\n".join(f"  {i}: {e['year']} – {e['text']}" for i, e in enumerate(today.get("events", [])))
     return "\n".join(lines), events
 
@@ -644,6 +646,13 @@ def collect_extras(config, date):
         extras["football"] = fetch_football(config["fussball"])
         fb = extras["football"]
         print(f"  ✓ Fußball {fb['team']}: {len(fb['fixtures'])} Spiele geplant, {len(fb['results'])} Ergebnisse, {len(fb['tables'])} Tabelle(n)")
+    if config.get("formel1"):
+        try:
+            extras["formula1"] = fetch_formula1(config["formel1"])
+            f1 = extras["formula1"]
+            print(f"  ✓ Formel 1: nächstes Rennen {(f1['next'] or {}).get('name', '–')}, {len(f1['drivers'])} Fahrer in der WM-Wertung")
+        except Exception as e:
+            print(f"  ✗ Formel 1: {e}")
     return extras
 
 
@@ -736,6 +745,103 @@ def describe_football(fb):
     if row:
         parts.append(f"Tabellenplatz {row['rank']} mit {row['points']} Punkten")
     return f"{fb['team']}: " + "; ".join(parts) if parts else ""
+
+
+# ───────────────────────── Formel 1: Rennkalender & WM-Stand (Jolpica, ohne Key) ─────────────────────────
+
+F1_API = "https://api.jolpi.ca/ergast/f1/"
+GP_NAMES = {
+    "Australian": "Australien", "Chinese": "China", "Japanese": "Japan", "Bahrain": "Bahrain", "Saudi Arabian": "Saudi-Arabien",
+    "Miami": "Miami", "Emilia Romagna": "Emilia-Romagna", "Monaco": "Monaco", "Spanish": "Spanien", "Barcelona": "Barcelona",
+    "Canadian": "Kanada", "Austrian": "Österreich", "British": "Großbritannien", "Belgian": "Belgien", "Hungarian": "Ungarn",
+    "Dutch": "Niederlande", "Italian": "Italien", "Azerbaijan": "Aserbaidschan", "Singapore": "Singapur",
+    "United States": "USA", "Mexico City": "Mexiko", "Brazilian": "Brasilien", "São Paulo": "Brasilien",
+    "Las Vegas": "Las Vegas", "Qatar": "Katar", "Abu Dhabi": "Abu Dhabi",
+}
+F1_SESSIONS = {"FirstPractice": "1. Training", "SecondPractice": "2. Training", "ThirdPractice": "3. Training",
+               "SprintQualifying": "Sprint-Quali", "SprintShootout": "Sprint-Quali", "Sprint": "Sprint", "Qualifying": "Qualifying"}
+F1_STATUS = {"Lapped": "überrundet", "Retired": "Ausfall", "Disqualified": "disqualifiziert", "Did not start": "nicht gestartet",
+             "Did not qualify": "nicht qualifiziert", "Withdrew": "zurückgezogen", "Accident": "Unfall", "Collision": "Kollision",
+             "Engine": "Motor", "Power Unit": "Antrieb", "Gearbox": "Getriebe", "Brakes": "Bremsen", "Hydraulics": "Hydraulik",
+             "Suspension": "Aufhängung", "Spun off": "Dreher", "Puncture": "Reifenschaden"}
+
+
+def f1_status(result):
+    """Zielzeit bzw. Abstand – sonst der Grund, auf Deutsch („+1 Lap“ → „+1 Runde“)."""
+    if time := (result.get("Time") or {}).get("time"):
+        return time
+    status = result.get("status", "")
+    if laps := re.fullmatch(r"\+(\d+) Laps?", status):
+        return f"+{laps.group(1)} {'Runde' if laps.group(1) == '1' else 'Runden'}"
+    return F1_STATUS.get(status, status)
+
+
+def gp_name(race_name):
+    """„Mexico City Grand Prix“ → „GP Mexiko“."""
+    base, rest = re.match(r"(.*?)\s*Grand Prix(.*)", race_name).groups() if "Grand Prix" in race_name else (race_name, "")
+    return f"GP {GP_NAMES.get(base, base)}{rest}"
+
+
+def f1_time(block):
+    """Jolpica liefert Datum und Uhrzeit (UTC) getrennt."""
+    return f"{block['date']}T{block.get('time', '12:00:00Z').replace('Z', '+00:00')}"
+
+
+def f1_race(race):
+    sessions = [{"name": label, "start": f1_time(race[key])} for key, label in F1_SESSIONS.items() if race.get(key)]
+    return {
+        "round": int(race["round"]), "name": gp_name(race["raceName"]), "circuit": race["Circuit"]["circuitName"],
+        "place": race["Circuit"]["Location"].get("locality", ""), "start": f1_time(race),
+        "sessions": sorted(sessions, key=lambda x: x["start"]) + [{"name": "Rennen", "start": f1_time(race)}],
+    }
+
+
+def fetch_formula1(cfg):
+    races = get_json(F1_API + "current.json")["MRData"]["RaceTable"]["Races"]
+    # Ein Rennen gilt bis drei Stunden nach dem Start als „nächstes“ – so steht es am Renntag noch oben
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=3)
+    upcoming = [f1_race(r) for r in races if datetime.fromisoformat(f1_time(r)) > cutoff]
+
+    drivers, teams, last = [], [], None
+    lists = get_json(F1_API + "current/driverstandings.json")["MRData"]["StandingsTable"]["StandingsLists"]
+    if lists:
+        drivers = [{"pos": d.get("position") or d.get("positionText"), "name": f"{d['Driver']['givenName']} {d['Driver']['familyName']}",
+                    "short": d["Driver"]["familyName"], "team": (d.get("Constructors") or [{}])[-1].get("name", ""),
+                    "points": d["points"], "wins": int(d.get("wins") or 0)} for d in lists[0]["DriverStandings"]]
+    lists = get_json(F1_API + "current/constructorstandings.json")["MRData"]["StandingsTable"]["StandingsLists"]
+    if lists:
+        teams = [{"pos": t.get("position") or t.get("positionText"), "team": t["Constructor"]["name"], "points": t["points"],
+                  "wins": int(t.get("wins") or 0)} for t in lists[0]["ConstructorStandings"]]
+    done = get_json(F1_API + "current/last/results.json")["MRData"]["RaceTable"]["Races"]
+    if done:
+        race = done[0]
+        last = {**{k: v for k, v in f1_race(race).items() if k != "sessions"}, "results": [
+            {"pos": r["positionText"], "driver": r["Driver"]["familyName"], "team": r["Constructor"]["name"],
+             "time": f1_status(r)} for r in race["Results"][:10]]}
+    return {
+        "section": cfg.get("ressort", "f1"), "season": races[0]["season"] if races else "", "rounds": len(races),
+        "next": upcoming[0] if upcoming else None, "calendar": [{k: r[k] for k in ("round", "name", "start")} for r in upcoming[1:5]],
+        "last": last, "drivers": drivers, "teams": teams,
+    }
+
+
+def describe_formula1(f1):
+    """Für KI und Podcast: nächstes Rennen, letztes Ergebnis, WM-Stand."""
+    when = lambda iso: datetime.fromisoformat(iso).astimezone(TZ)
+    parts = []
+    if race := f1["next"]:
+        start = when(race["start"])
+        quali = next((s for s in race["sessions"] if s["name"] == "Qualifying"), None)
+        parts.append(f"nächstes Rennen {race['name']} in {race['place']} am {WEEKDAYS[start.weekday()]} {start.day}. "
+                     f"{MONTHS[start.month - 1]} um {start:%H:%M} Uhr Wiener Zeit"
+                     + (f", Qualifying {WEEKDAYS[when(quali['start']).weekday()]} um {when(quali['start']):%H:%M}" if quali else ""))
+    if last := f1["last"]:
+        podium = [r["driver"] for r in last["results"][:3]]
+        if podium:
+            parts.append(f"zuletzt {last['name']}: Sieg {podium[0]}" + (f" vor {' und '.join(podium[1:])}" if len(podium) > 1 else ""))
+    if f1["drivers"]:
+        parts.append("WM-Stand: " + ", ".join(f"{d['pos']}. {d['short']} {d['points']} Punkte" for d in f1["drivers"][:3]))
+    return "; ".join(parts)
 
 
 # ───────────────────────── Doppelte Meldungen bündeln ─────────────────────────
@@ -1011,7 +1117,7 @@ def build_edition(config):
     telegram = {s["id"] for s in sections if s.get("telegramm")}
 
     date = datetime.now(TZ).date()
-    print("Hole Wetter, Börse, Fußball und Der Tag …")
+    print("Hole Wetter, Börse, Sport und Der Tag …")
     extras = collect_extras(config, date)
     print("Hole Feeds …")
     articles, feed_status = collect_articles(config)
@@ -1119,7 +1225,7 @@ def build_edition(config):
         "top": top,
         "briefing": build_briefing(sections, articles, front and front.get("briefing"), speakers, greeting_without_ai(extras, date)),
         "speakers": [sp["name"] for sp in speakers],
-        **{key: extras[key] for key in ("weather", "markets", "today", "football") if extras.get(key) is not None},
+        **{key: extras[key] for key in ("weather", "markets", "today", "football", "formula1") if extras.get(key) is not None},
         **({"puzzles": puzzles} if puzzles else {}),
         **({"weekend": {"longreads": [a["id"] for a in longreads]}} if longreads else {}),
         "articles": articles,

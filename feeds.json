@@ -3,7 +3,7 @@
   "unterzeile": "Wiener Privatredaktion • Kuratierte Tagesausgabe",
   "telegramm": {
     "titel": "Sport-Telegramm",
-    "unterzeile": "Hütteldorf & PDC"
+    "unterzeile": "Hütteldorf, Boxengasse & PDC"
   },
   "einstellungen": {
     "max_artikel_pro_feed": 8,
@@ -56,6 +56,9 @@
     "espn_id": 519,
     "liga": "aut.1",
     "wettbewerbe": ["aut.1", "uefa.champions", "uefa.europa", "uefa.europa.conf"]
+  },
+  "formel1": {
+    "ressort": "f1"
   },
   "ressorts": [
     {
@@ -136,6 +139,20 @@
       "farbe": "gruen",
       "feeds": [
         "https://news.google.com/rss/search?q=%22SK+Rapid%22+OR+%22Rapid+Wien%22&hl=de-AT&gl=AT&ceid=AT:de"
+      ]
+    },
+    {
+      "id": "f1",
+      "name": "Formel 1",
+      "kurz": "F1",
+      "icon": "🏎️",
+      "telegramm": true,
+      "farbe": "rot",
+      "feeds": [
+        {"url": "https://de.motorsport.com/rss/f1/news/", "max_artikel": 6},
+        {"url": "https://www.motorsport-magazin.com/rss/formel1.xml", "max_artikel": 5},
+        {"url": "https://www.sportschau.de/motorsport/formel1/index~atom.xml", "max_artikel": 4},
+        {"url": "https://news.google.com/rss/search?q=%22Formel+1%22&hl=de-AT&gl=AT&ceid=AT:de", "max_artikel": 5}
       ]
     },
     {
