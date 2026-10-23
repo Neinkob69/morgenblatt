@@ -928,7 +928,7 @@
       $('#telegramBox').classList.toggle('hidden', !telegramSections.length);
       $('#telegramTitle').innerText = edition.telegram?.titel || 'Telegramm';
       $('#telegramSubtitle').innerText = edition.telegram?.unterzeile || telegramSections.map(s => s.short).join(' & ');
-      $('#rightSidebarContent').innerHTML = renderFootballMini() + (telegramSections
+      $('#rightSidebarContent').innerHTML = renderFootballMini() + renderF1Mini() + (telegramSections
         .flatMap(s => articles.filter(a => a.section === s.id).slice(0, 2))
         .map(a => renderSmallArticle(a, true)).join('') || '<div class="italic text-sm text-[var(--ink-muted)]">Keine Meldungen.</div>');
     }
@@ -1078,6 +1078,67 @@
             <div>${heading('Nächste Spiele')}${(fb.fixtures || []).slice(0, 4).map(match).join('') || '<div class="text-[var(--ink-muted)]">Keine Termine.</div>'}
                  ${heading('Letzte Ergebnisse')}${(fb.results || []).slice(0, 4).map(match).join('')}</div>
             <div>${tables}</div>
+          </div>
+        </div>`;
+    }
+
+    // ───────── Formel 1: Rennkalender & WM-Stand ─────────
+    function fromNow(iso) {
+      const day = d => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Europe/Vienna' });
+      const days = Math.round((new Date(day(iso)) - new Date(day(Date.now()))) / 864e5);
+      return days <= 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`;
+    }
+
+    const f1Pos = pos => /^\d+$/.test(pos) ? `${pos}.` : '–';
+
+    function renderF1Mini() {
+      const f1 = edition.formula1;
+      if (!f1 || (!f1.next && !f1.drivers?.length)) return '';
+      const leader = f1.drivers?.[0], race = f1.next, quali = race?.sessions.find(x => x.name === 'Qualifying');
+      return `
+        <div class="py-3 hairline-bottom cursor-pointer group" onclick="setSection('${esc(f1.section)}')">
+          <div class="font-mono-meta text-[10px] uppercase tracking-wider font-semibold" style="color:var(--accent-red)">Formel 1${leader ? ` · WM: ${esc(leader.short)} ${esc(leader.points)} Pkt.` : ''}</div>
+          ${race ? `<div class="font-masthead font-bold text-base leading-snug mt-0.5 group-hover:underline">${esc(race.name)} · ${esc(fromNow(race.start))}</div>
+            <div class="text-sm text-[var(--ink-secondary)]">Rennen ${esc(fmtKickoff(race.start))}${quali ? ` · Quali ${esc(fmtKickoff(quali.start))}` : ''}</div>` : ''}
+          ${f1.last?.results?.length ? `<div class="font-mono-meta text-[11px] mt-1">Zuletzt: ${esc(f1.last.name)} – Sieg ${esc(f1.last.results[0].driver)}</div>` : ''}
+        </div>`;
+    }
+
+    function renderF1() {
+      const f1 = edition.formula1;
+      if (!f1) return '';
+      const heading = text => `<div class="font-mono-meta text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mt-3 mb-1">${text}</div>`;
+      const row = (left, right, cls = '') => `<div class="flex justify-between gap-3 py-1 hairline-bottom ${cls}"><span class="truncate">${left}</span><span class="whitespace-nowrap">${right}</span></div>`;
+      const race = f1.next, now = Date.now();
+      const next = race ? `
+        ${heading(`Nächstes Rennen · Runde ${esc(race.round)}/${esc(f1.rounds)}`)}
+        <div class="font-masthead font-bold text-xl leading-tight">${esc(race.name)}</div>
+        <div class="font-serif-body text-sm text-[var(--ink-secondary)] mb-1">${esc(race.circuit)}${race.place ? `, ${esc(race.place)}` : ''} · ${esc(fromNow(race.start))}</div>
+        ${race.sessions.map(x => row(esc(x.name), esc(fmtKickoff(x.start)),
+          x.name === 'Rennen' ? 'font-bold' : new Date(x.start) < now ? 'text-[var(--ink-muted)] line-through' : '')).join('')}` : heading('Saison beendet');
+      const last = f1.last ? `
+        ${heading(`Letztes Rennen · ${esc(f1.last.name)}`)}
+        ${f1.last.results.map(r => row(`${esc(f1Pos(r.pos))} ${esc(r.driver)} <span class="text-[var(--ink-muted)]">${esc(r.team)}</span>`, esc(r.time))).join('')}` : '';
+      const calendar = f1.calendar?.length ? `${heading('Danach')}${f1.calendar.map(r => row(esc(r.name), esc(fmtKickoff(r.start)))).join('')}` : '';
+      const table = (title, rows, label) => rows?.length ? `
+        ${heading(title)}
+        <table class="w-full font-mono-meta text-[12px]">
+          <thead><tr class="text-[var(--ink-muted)] text-left"><th class="font-normal w-7">#</th><th class="font-normal">${label}</th><th class="font-normal text-right pl-3">Siege</th><th class="font-normal text-right pl-3">Pkt</th></tr></thead>
+          <tbody>${rows.map(r => `
+            <tr class="hairline-bottom"><td class="py-0.5">${esc(r.pos)}</td>
+              <td class="truncate max-w-0 w-full">${esc(r.name || r.team)}${r.name ? ` <span class="text-[var(--ink-muted)] hidden sm:inline">${esc(r.team)}</span>` : ''}</td>
+              <td class="text-right pl-3">${esc(r.wins)}</td><td class="text-right pl-3 font-bold">${esc(r.points)}</td></tr>`).join('')}
+          </tbody>
+        </table>` : '';
+      return `
+        <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)]/50 p-3.5 mb-8">
+          <div class="flex items-center justify-between gap-3 border-b border-[var(--rule-heavy)] pb-1.5 mb-1">
+            <span class="font-mono-meta text-xs font-bold uppercase tracking-widest whitespace-nowrap">Formel 1 · Saison ${esc(f1.season)}</span>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)]">Daten: Jolpica</span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 font-mono-meta text-[12px]">
+            <div>${next}${last}${calendar}</div>
+            <div>${table('Fahrer-WM', (f1.drivers || []).slice(0, 10), 'Fahrer')}${table('Konstrukteure', f1.teams, 'Team')}</div>
           </div>
         </div>`;
     }
@@ -1359,6 +1420,7 @@
               </div>
               ${sec.markets ? renderKurszettel() : ''}
               ${edition.football?.section === sec.id ? renderFootball() : ''}
+              ${edition.formula1?.section === sec.id ? renderF1() : ''}
               ${renderGrid(list.slice(0, 7), { feature: true })}
             </section>`;
         }).join('');
@@ -1383,6 +1445,7 @@
       $('#activeSectionKicker').innerText = `SEITE ${pageOf(sec)} · ${list.length} MELDUNGEN`;
       $('#activeSectionHeading').innerText = sectionLabel(sec);
       target.innerHTML = (sec.markets ? renderKurszettel() : '') + (edition.football?.section === sec.id ? renderFootball() : '') +
+        (edition.formula1?.section === sec.id ? renderF1() : '') +
         (list.length ? renderGrid(list, { feature: true }) : `<div class="py-12 text-center text-[var(--ink-muted)]">Heute nichts Neues in diesem Ressort.</div>`);
     }
 
@@ -2088,6 +2151,7 @@
           ...(edition.weekend?.longreads?.length ? [{ label: 'Fürs Wochenende', go: () => nanoListPage('Wochenende', edition.weekend.longreads.filter(id => byId[id])) }] : []),
           ...(edition.weather || edition.today ? [{ label: 'Wetter & Tag', go: nanoTodayPage }] : []),
           ...(edition.football ? [{ label: edition.football.team, go: nanoFootballPage }] : []),
+          ...(edition.formula1 ? [{ label: 'Formel 1', go: nanoF1Page }] : []),
           ...(edition.puzzles?.quiz?.length ? [{ label: 'Quiz', go: nanoQuizPage }] : []),
           ...(edition.markets?.length ? [{ label: 'Börse', go: nanoMarketsPage }] : []),
           ...(archiveList.length ? [{ label: 'Archiv', go: nanoArchivePage }] : []),
@@ -2133,6 +2197,21 @@
             ...(fb.fixtures || []).slice(0, 3).map(m => info(`${m.home} – ${m.away}`, `${fmtKickoff(m.date)} · ${m.competition}`)),
             ...(fb.results || []).slice(0, 3).map(m => info(`${m.home} – ${m.away}`, '', m.score)),
             ...(fb.tables || []).flatMap(t => t.rows).map(r => info(`${r.rank}. ${r.team}${r.is_team ? ' ●' : ''}`, '', `${r.points} Pkt.`)),
+          ];
+        },
+      };
+    }
+
+    function nanoF1Page() {
+      const info = (label, sub, right) => ({ label, sub, right, twoLine: !!sub, noChevron: true, go: () => {} });
+      return {
+        title: 'Formel 1',
+        build: () => {
+          const f1 = edition.formula1, race = f1.next;
+          return [
+            ...(race ? race.sessions.map(x => info(`${race.name}: ${x.name}`, fmtKickoff(x.start))) : []),
+            ...(f1.last?.results || []).slice(0, 3).map(r => info(`${f1Pos(r.pos)} ${r.driver}`, f1.last.name, r.time)),
+            ...(f1.drivers || []).map(d => info(`${d.pos}. ${d.short}`, '', `${d.points} Pkt.`)),
           ];
         },
       };

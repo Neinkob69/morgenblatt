@@ -13,7 +13,7 @@ feeds.json ──► GitHub Action (6:15) ──────► update_newspaper
                                              ├─ Feeds holen, Volltext aus dem XML bzw. von der Artikelseite
                                              ├─ HTML bereinigen (nh3) – keine Skripte, kein Tracking
                                              ├─ Wetter (Open-Meteo), Kurszettel (Yahoo Finance, EZB), Der Tag (Wikipedia, kuriose-feiertage.de)
-                                             ├─ Rapid: Spielplan, Ergebnisse & Tabelle (ESPN)
+                                             ├─ Sport: Rapid-Spielplan & Tabelle (ESPN), Formel-1-Kalender & WM-Stand (Jolpica)
                                              ├─ Gemini: Zusammenfassungen, Doppelte bündeln, Titelseite, Leitartikel, Fakt, Quiz, Briefing
                                              ├─ Sudoku des Tages, am Wochenende Lesestücke, sonntags „Die Woche“
                                              ├─ Briefing als Zwiegespräch sprechen (Gemini-TTS, sonst edge-tts) → MP3 + Podcast-Feed
@@ -47,7 +47,30 @@ sie wieder in den Vordergrund holt.
 ## Feeds & Einstellungen
 
 Alles steht in `feeds.json`: Ressorts, Reihenfolge, Icons, welche Ressorts im „Telegramm“ landen,
-wie viele Artikel pro Feed, wie lange das Archiv reicht, Podcast-Stimmen.
+wie viele Artikel pro Feed, wie lange das Archiv reicht, Podcast-Stimmen. Bearbeiten geht direkt auf GitHub
+(Datei öffnen → Stift → „Commit changes“) – die Action baut danach sofort eine neue Ausgabe.
+
+**Neuen Feed zu einem Ressort:** die Adresse in dessen `"feeds"`-Liste eintragen, durch Komma getrennt.
+**Neues Ressort:** einen Block in `"ressorts"` kopieren – die Reihenfolge dort ist die Reihenfolge in der Zeitung:
+
+```json
+{
+  "id": "f1",                 // eindeutig, klein, ohne Leerzeichen
+  "name": "Formel 1",         // Überschrift
+  "kurz": "F1",               // für Navigation & Karussell (optional)
+  "icon": "🏎️",
+  "farbe": "rot",
+  "telegramm": true,          // die neuesten Meldungen auch im Telegramm (optional)
+  "feeds": [
+    "https://de.motorsport.com/rss/f1/news/",
+    {"url": "https://www.motorsport-magazin.com/rss/formel1.xml", "max_artikel": 5}
+  ]
+}
+```
+
+(Die `//`-Kommentare nur hier zur Erklärung – JSON selbst kennt keine Kommentare. Ein fehlendes Komma
+legt den Lauf lahm; die alte Ausgabe bleibt dann einfach stehen.)
+
 Feeds dürfen als URL oder als `{"url": "...", "name": "...", "max_alter_tage": 60, "max_artikel": 3}`
 eingetragen sein – praktisch für Fachjournale, die nur alle paar Wochen ein neues Heft bringen.
 Liefert eine Adresse statt des Feeds eine Webseite, sucht die Action dort nach dem verlinkten Feed.
@@ -62,6 +85,8 @@ Außerdem in `feeds.json`:
 - `fussball` – Spielplan, Ergebnisse und Tabelle eines Vereins im Ressort `ressort`. `espn_id` ist die Vereins-ID bei ESPN
   (Rapid = 519, steht in der Adresse der Vereinsseite auf espn.com), `liga` die Liga für die Tabelle,
   `wettbewerbe` alle Bewerbe, deren Spiele im Spielplan auftauchen sollen. Braucht keinen API-Schlüssel.
+- `formel1` – Rennkalender (alle Sessions in Wiener Zeit), letztes Ergebnis und WM-Stand im Ressort `ressort`,
+  über die offene Jolpica-Schnittstelle (Nachfolger von Ergast), ebenfalls ohne Schlüssel
 - `raetsel` – Rätselecke mit Sudoku des Tages (Mo leicht → Sa sehr schwer) und Quiz zur Ausgabe
 - `wochenende` – samstags und sonntags „Fürs Wochenende“ mit langen Lesestücken, sonntags „Die Woche“ als Rückblick
 - `podcast.sprecher` – die beiden Stimmen der Hörausgabe: Name, Gemini-Stimme und edge-tts-Stimme als Ersatz.
