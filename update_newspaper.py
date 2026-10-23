@@ -17,6 +17,7 @@ Umgebungsvariablen:
   OUT_DIR               Zielordner (Standard: aktueller Ordner)
   SITE_URL              Adresse der live-Seite – von dort kommen Archiv und alte Folgen zurück
   NUR_FRONTEND=true     keine neue Ausgabe bauen, nur die vorhandene neu veröffentlichen
+  NUR_KURSE=true        nur die Kurse der heutigen Ausgabe erneuern (fehlt sie, entsteht eine neue)
 """
 import base64
 import gzip
@@ -1374,6 +1375,7 @@ def encrypt(edition):
     b64 = lambda b: base64.b64encode(b).decode("ascii")
     return {
         "version": 2, "encrypted": True, "date": edition["date"], "generated_at": edition["generated_at"],
+        "markets_at": edition.get("markets_at"),
         "kdf": "PBKDF2-SHA256", "iterations": KDF_ITERATIONS, "salt": b64(salt), "iv": b64(iv), "data": b64(data),
     }
 
@@ -1451,6 +1453,29 @@ def publish_edition(edition, keep_days):
     write_json(out("archiv", "index.json"), {"editions": index[:keep_days]}, indent=1)
 
 
+def refresh_markets(config):
+    """Kurs-Update nach Börsenstart: nur die Kurse der heutigen Ausgabe erneuern, alles andere bleibt.
+    Gibt False zurück, wenn heute noch keine Ausgabe online ist."""
+    payload = read_json(out(EDITION_FILE), None)
+    now = datetime.now(TZ)
+    if not readable(payload) or payload.get("date") != now.date().isoformat():
+        return False
+    if not config.get("boerse") or now.weekday() >= 5:
+        print("Heute kein Handel – die Ausgabe bleibt, wie sie ist.")
+        return True
+    edition = decrypt(payload) if PASSWORD else payload
+    markets = fetch_markets(config["boerse"])
+    if not markets:
+        print("Keine Kurse bekommen – die Ausgabe bleibt, wie sie ist.")
+        return True
+    fresh = {q["name"] for q in markets}
+    edition["markets"] = markets + [q for q in edition.get("markets", []) if q["name"] not in fresh]
+    edition["markets_at"] = now.isoformat(timespec="seconds")
+    publish_edition(edition, config.get("einstellungen", {}).get("archiv_tage", 14))
+    print(f"Kurse aktualisiert: {len(markets)} Werte, Stand {now:%H:%M}.")
+    return True
+
+
 def run():
     with open(CONFIG_FILE, encoding="utf-8") as f:
         config = json.load(f)
@@ -1459,9 +1484,12 @@ def run():
     podcast_dir = podcast_path()
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    if os.environ.get("NUR_FRONTEND") == "true":
+    only_markets = os.environ.get("NUR_KURSE") == "true"
+    if only_markets or os.environ.get("NUR_FRONTEND") == "true":
         restore_from_site(podcast_dir, with_current=True)
-        if readable(read_json(out(EDITION_FILE), None)):
+        if only_markets and refresh_markets(config):
+            return
+        if not only_markets and readable(read_json(out(EDITION_FILE), None)):
             print("Nur Oberfläche neu veröffentlicht – Ausgabe, Archiv und Podcast bleiben.")
             return
         print("Keine passende Ausgabe online – baue eine neue.")

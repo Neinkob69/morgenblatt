@@ -8,7 +8,7 @@ und einer gesprochenen Hörausgabe als echtem Podcast.
 ## So funktioniert's
 
 ```
-feeds.json ──► GitHub Action (täglich) ──► update_newspaper.py ──► _site/ ──► GitHub Pages
+feeds.json ──► GitHub Action (6:15) ──────► update_newspaper.py ──► _site/ ──► GitHub Pages
                                              │
                                              ├─ Feeds holen, Volltext aus dem XML bzw. von der Artikelseite
                                              ├─ HTML bereinigen (nh3) – keine Skripte, kein Tracking
@@ -33,8 +33,16 @@ Podcast-Folgen holt sie sich bei jedem Lauf von der live-Seite zurück.
    Wichtig: *Repository secret*, nicht „Variable“ und nicht als Secret der Umgebung `github-pages`.
 3. Actions → „Tägliche Zeitung generieren“ → *Run workflow*.
 
-Danach läuft alles von selbst: jeden Morgen eine neue Ausgabe. Ein Push auf `main` stellt Änderungen sofort live –
-neue Feeds in `feeds.json` bringen gleich eine neue Ausgabe, Änderungen an der Oberfläche nur die neue Oberfläche.
+Danach läuft alles von selbst:
+
+- **6:15** (Wiener Zeit) erscheint die neue Ausgabe.
+- **9:30** werden die Kurse nach Börsenstart aufgefrischt (nur werktags, sonst ändert sich nichts).
+  Ist die Frühausgabe ausgefallen – GitHub verschluckt geplante Läufe gelegentlich –, entsteht sie jetzt.
+- Ein Push auf `main` stellt Änderungen sofort live: neue Feeds in `feeds.json` bringen gleich eine neue Ausgabe,
+  Änderungen an der Oberfläche nur die neue Oberfläche.
+
+Die Zeiten stehen oben in `.github/workflows/update.yml`. Die geöffnete App holt sich Neues selbst, sobald man
+sie wieder in den Vordergrund holt.
 
 ## Feeds & Einstellungen
 

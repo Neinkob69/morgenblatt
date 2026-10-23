@@ -775,6 +775,33 @@
 
     showEdition(CURRENT).then(loadArchiveIndex);
 
+    // Die App bleibt am Handy oft tagelang im Hintergrund offen. Kommt sie zurück, schauen wir nach Neuem:
+    // eine neue Ausgabe wird aufgeschlagen (außer man liest oder hört gerade), frische Kurse still getauscht.
+    let lastFreshCheck = Date.now();
+    document.addEventListener('visibilitychange', async () => {
+      if (document.hidden || !edition || currentFile !== CURRENT || Date.now() - lastFreshCheck < 5 * 60e3) return;
+      lastFreshCheck = Date.now();
+      try {
+        const res = await fetch(CURRENT, { cache: 'no-store' });
+        if (!res.ok) return;
+        const payload = await res.json();
+        if (payload.generated_at !== edition.generated_at) {
+          if (readerId || audioPlaying()) return;
+          initEdition(payload.encrypted ? await unlock(payload) : payload);
+          loadArchiveIndex();
+        } else if (payload.markets_at && payload.markets_at !== edition.markets_at) {
+          const data = payload.encrypted ? await unlock(payload) : payload;
+          edition.markets = data.markets;
+          edition.markets_at = data.markets_at;
+          renderMarkets();
+          renderDayLine();
+          document.querySelectorAll('[data-kurszettel]').forEach(el => { el.outerHTML = renderKurszettel(); });
+        }
+      } catch (err) {
+        console.warn('Keine frische Ausgabe:', err);
+      }
+    });
+
     function initEdition(data, file = CURRENT) {
       const firstLoad = !edition;
       if (!firstLoad) {
@@ -938,10 +965,17 @@
         <div class="font-mono-meta text-[10px] text-[var(--ink-muted)] mt-0.5">↑ ${esc(w.sunrise)} · ↓ ${esc(w.sunset)}${w.uv != null ? ` · UV ${fmtNumber(w.uv, 0)}` : ''}</div>`;
     }
 
+    // Frühausgabe: Schlusskurse vom Vortag; nach dem Kurs-Update um 9:30 der Stand von dann
+    function marketsAsOf() {
+      return edition.markets_at
+        ? `Stand ${new Date(edition.markets_at).toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Vienna' })}`
+        : 'Schluss Vortag';
+    }
+
     function renderMarkets() {
       const top = (edition.markets || []).filter(q => q.kind !== 'aktie');
       $('#marketStrip').classList.toggle('hidden', !top.length);
-      $('#marketStrip').innerHTML = '<span class="text-[var(--ink-muted)] uppercase tracking-widest mr-4">Kurszettel · Schluss Vortag</span>' +
+      $('#marketStrip').innerHTML = `<span class="text-[var(--ink-muted)] uppercase tracking-widest mr-4">Kurszettel · ${marketsAsOf()}</span>` +
         top.map(q => `<span class="mr-5"><b>${esc(q.name)}</b> ${fmtQuote(q)} <span style="color:${changeColor(q.change)}">${fmtChange(q.change)}</span></span>`).join('');
     }
 
@@ -949,10 +983,10 @@
       const stocks = (edition.markets || []).filter(q => q.kind === 'aktie').sort((a, b) => b.change - a.change);
       if (!stocks.length) return '';
       return `
-        <div class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)]/50 p-3.5 mb-8">
+        <div data-kurszettel class="border border-[var(--rule-heavy)] bg-[var(--paper-elevated)]/50 p-3.5 mb-8">
           <div class="flex items-center justify-between gap-3 border-b border-[var(--rule-heavy)] pb-1.5 mb-2">
             <span class="font-mono-meta text-xs font-bold uppercase tracking-widest">Kurszettel Wiener Börse</span>
-            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] text-right">Schluss Vortag · nach Veränderung</span>
+            <span class="font-mono-meta text-[10px] uppercase text-[var(--ink-muted)] text-right">${marketsAsOf()} · nach Veränderung</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 font-mono-meta text-[12px]">${stocks.map(q => `
             <div class="flex justify-between gap-3 py-1 hairline-bottom"><span class="truncate">${esc(q.name)}</span><span class="whitespace-nowrap">${fmtQuote(q)} <span style="color:${changeColor(q.change)}">${fmtChange(q.change)}</span></span></div>`).join('')}
