@@ -5,11 +5,18 @@ name: Tägliche Zeitung generieren
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # 06:00 UTC = 07:00 (Winter) bzw. 08:00 (Sommer) in Wien
+    - cron: '15 6 * * *'   # Frühausgabe um 6:15
+      timezone: 'Europe/Vienna'
+    - cron: '30 9 * * *'   # 9:30: Kurse nach Börsenstart – oder die Ausgabe, falls die frühe ausgefallen ist
+      timezone: 'Europe/Vienna'
   workflow_dispatch:      # Manueller Start-Button
     inputs:
       nur_frontend:
         description: 'Nur die Oberfläche neu veröffentlichen (keine neue Ausgabe)'
+        type: boolean
+        default: false
+      nur_kurse:
+        description: 'Nur die Kurse der heutigen Ausgabe aktualisieren'
         type: boolean
         default: false
   push:                   # Änderungen sofort live stellen
@@ -67,6 +74,7 @@ jobs:
           SITE_URL: ${{ steps.pages.outputs.base_url }}
           OUT_DIR: _site
           NUR_FRONTEND: ${{ steps.changes.outputs.nur_frontend == 'true' || inputs.nur_frontend }}
+          NUR_KURSE: ${{ github.event.schedule == '30 9 * * *' || inputs.nur_kurse }}
         run: |
           mkdir -p _site
           cp -r index.html sw.js manifest.webmanifest icons _site/
